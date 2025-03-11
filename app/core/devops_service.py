@@ -10,12 +10,22 @@ def get_headers():
         "Authorization": f"Basic {AZURE_DEVOPS_TOKEN}",
     }
 
-def get_devops_data():
-    url = f"{AZURE_DEVOPS_URL}/_apis/projects?api-version=6.0"
+def get_projects():
+    url = f"{AZURE_DEVOPS_URL}/_apis/projects?api-version=7.1"
     response = requests.get(url, headers=get_headers())
 
     if response.status_code == 200:
-        return response.json()
+        data = response.json
+        projects = [
+            {
+                "id": p["id"],
+                "name": p["name"],
+                "description":p.get("description", "Sem descrição"),
+                "url": p["url"]
+            }
+            for p in data.get("value", [])
+        ]
+        return projects
     return {"error": "Falha ao obter dados do Azure DevOps"}
 
 def select_project(project_id:str):
@@ -26,7 +36,7 @@ def select_project(project_id:str):
     return {"error": "Falha ao obter dados do projeto {project_id}"}
 
 def get_project_status(project_id:str):
-    url = f"{AZURE_DEVOPS_URL}/_apis/projects/{project_id}/state?api-version=6.0"
+    url = f"{AZURE_DEVOPS_URL}/_apis/build/builds?project={project_id}&api-version=7.1"
     response = requests.get(url, headers=get_headers())
     if response.status_code == 200:
         return response.json()
