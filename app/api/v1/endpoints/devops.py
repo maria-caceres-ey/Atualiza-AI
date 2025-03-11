@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from app.core.teams_service import send_teams_message
 from app.core.devops_service import (
     select_project,
     get_project_status,
@@ -15,7 +16,7 @@ router = APIRouter()
 async def get_project_info_endpoint(project_id:str):
     project_data = get_project_info(project_id)
     if "error" in project_data:
-        raise HTTPException(status_code=400 detail=project_data["error"])
+        raise HTTPException(status_code=400, detail=project_data["error"])
     return project_data
 
 @router.get("/projects/{project_id}/status")
@@ -52,3 +53,15 @@ async def get_team_endpoint(project_id: str):
     if "error" in team_info:
         raise HTTPException(status_code=400, detail=team_info["error"])
     return team_info
+
+@router.get("/notify_teams/{project_id}")
+async def notify_teams(project_id: str):
+    project_info = get_project_info(project_id)
+
+    if "error" in project_info:
+        return project_info
+    
+    message = f"Status do projeto {project_id}: {project_info['state']}"
+    send_teams_message(message)
+
+    return {"message": "Notificação enviada com sucesso"}
