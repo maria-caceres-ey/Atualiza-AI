@@ -1,67 +1,70 @@
 from fastapi import APIRouter, HTTPException
-from app.core.teams_service import send_teams_message
+from typing import Dict, Any, List
 from app.core.devops_service import (
-    select_project,
-    get_project_status,
-    get_overdue_tasks,
-    get_work_hours,
-    get_daily_tasks,
-    get_team,
-    get_project_info
+   get_projects, 
+   select_project, 
+   get_project_status,
+   get_overdue_tasks, 
+   get_work_hours, 
+   get_daily_tasks, 
+   get_teams, 
+   get_project_info
 )
 
 router = APIRouter()
 
-@router.get("/project/{project_id}")
-async def get_project_info_endpoint(project_id:str):
-    project_data = get_project_info(project_id)
-    if "error" in project_data:
-        raise HTTPException(status_code=400, detail=project_data["error"])
-    return project_data
+@router.get("/projects", response_model=List[Dict[str, Any]])
+async def list_projects():
+   projects = get_projects()
+   if "error" in projects:
+       raise HTTPException(status_code=500, detail=projects["error"])
+   return projects
 
-@router.get("/projects/{project_id}/status")
-async def get_project_status_endpoint(project_id:str):
-    status = get_project_status(project_id)
-    if "error" in status:
-        raise HTTPException(status_code=400, detail=status["error"])
-    return status
+@router.get("/projects/{project_id}", response_model=Dict[str, Any])
+async def project_details(project_id: str):
+   project = select_project(project_id)
+   if "error" in project:
+       raise HTTPException(status_code=404, detail=project["error"])
+   return project
 
-@router.get("/projects/{project_id}/overdue-tasks")
-async def get_overdue_tasks_endpoint(project_id: str):
-    overdue_tasks = get_overdue_tasks(project_id)
-    if "error" in overdue_tasks:
-        raise HTTPException(status_code=400, detail=overdue_tasks["error"])
-    return overdue_tasks
+@router.get("/projects/{project_id}/status", response_model=Dict[str, Any])
+async def project_status(project_id: str):
+   status = get_project_status(project_id)
+   if "error" in status:
+       raise HTTPException(status_code=500, detail=status["error"])
+   return status
 
-@router.get("/projects/{project_id}/work-hours")
-async def get_work_hours_endpoint(project_id: str):
-    work_hours = get_work_hours(project_id)
-    if "error" in work_hours:
-        raise HTTPException(status_code=400, detail=work_hours["error"])
-    return work_hours
+@router.post("/projects/{project_id}/overdue_tasks", response_model=Dict[str, Any])
+async def overdue_tasks(project_id: str):
+   tasks = get_overdue_tasks(project_id)
+   if "error" in tasks:
+       raise HTTPException(status_code=500, detail=tasks["error"])
+   return tasks
 
-@router.get("/projects/{project_id}/daily-tasks")
-async def get_daily_tasks_endpoint(project_id: str):
-    daily_tasks = get_daily_tasks(project_id)
-    if "error" in daily_tasks:
-        raise HTTPException(status_code=400, detail=daily_tasks["error"])
-    return daily_tasks
+@router.post("/projects/{project_id}/work_hours/{repository_id}", response_model=Dict[str, Any])
+async def work_hours(project_id: str, repository_id: str):
+   hours = get_work_hours(project_id, repository_id)
+   if "error" in hours:
+       raise HTTPException(status_code=500, detail=hours["error"])
+   return hours
 
-@router.get("/projects/{project_id}/team")
-async def get_team_endpoint(project_id: str):
-    team_info = get_team(project_id)
-    if "error" in team_info:
-        raise HTTPException(status_code=400, detail=team_info["error"])
-    return team_info
+@router.post("/projects/{project_id}/daily_tasks", response_model=Dict[str, Any])
+async def daily_tasks(project_id: str):
+   tasks = get_daily_tasks(project_id)
+   if "error" in tasks:
+       raise HTTPException(status_code=500, detail=tasks["error"])
+   return tasks
 
-@router.get("/notify_teams/{project_id}")
-async def notify_teams(project_id: str):
-    project_info = get_project_info(project_id)
+@router.get("/projects/{project_id}/team", response_model=Dict[str, Any])
+async def project_team(project_id: str):
+   team_info = get_teams(project_id)
+   if "error" in team_info:
+       raise HTTPException(status_code=500, detail=team_info["error"])
+   return team_info
 
-    if "error" in project_info:
-        return project_info
-    
-    message = f"Status do projeto {project_id}: {project_info['state']}"
-    send_teams_message(message)
-
-    return {"message": "Notificação enviada com sucesso"}
+@router.get("/project_info/{project_id}/{repository_id}", response_model=Dict[str, Any])
+async def project_info(project_id: str, repository_id: str):
+   info = get_project_info(project_id, repository_id)
+   if "error" in info:
+       raise HTTPException(status_code=500, detail=info["error"])
+   return info

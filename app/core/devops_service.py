@@ -15,7 +15,7 @@ def get_projects():
     response = requests.get(url, headers=get_headers())
 
     if response.status_code == 200:
-        data = response.json
+        data = response.json()
         projects = [
             {
                 "id": p["id"],
@@ -36,7 +36,7 @@ def select_project(project_id:str):
     return {"error": "Falha ao obter dados do projeto {project_id}"}
 
 def get_project_status(project_id:str):
-    url = f"{AZURE_DEVOPS_URL}/_apis/build/builds?api-version=7.1"
+    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/build/builds?api-version=7.1" #funciona mas retorna 0 em todos
     response = requests.get(url, headers=get_headers())
     if response.status_code == 200:
         return response.json()
@@ -52,9 +52,10 @@ def get_overdue_tasks(project_id:str):
         return response.json()
     return {"error": f"Falha ao obter tarefas atrasadas do projeto {project_id}"}
 
-def get_work_hours(project_id:str):
-    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/git/repositories?api-version=7.1" #ok mas errado
+def get_work_hours(project_id:str, repository_id: str):
+    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/git/repositories/{repository_id}/commits?api-version=7.1" #ok mas errado
     response = requests.get(url, headers=get_headers())
+    
     if response.status_code == 200:
         commits = response.json()
         total_hours = sum(commit.get("hours_spent", 0) for commit in commits)
@@ -78,10 +79,10 @@ def get_teams(project_id:str):
         return response.json()
     return {"error": f"Falha ao obter informações sobre a equipe do projeto {project_id}"}
 
-def get_project_info(project_id:str):
+def get_project_info(project_id:str, repository_id:str):
     project_status = get_project_status(project_id)
     overdue_tasks = get_overdue_tasks(project_id)
-    work_hours = get_work_hours(project_id)
+    work_hours = get_work_hours(project_id, repository_id)
     daily_tasks = get_daily_tasks(project_id)
     team_info = get_teams(project_id)
 
