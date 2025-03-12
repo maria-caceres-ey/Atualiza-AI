@@ -11,7 +11,7 @@ def get_headers():
     }
 
 def get_projects():
-    url = f"{AZURE_DEVOPS_URL}/_apis/projects?api-version=7.1"
+    url = f"{AZURE_DEVOPS_URL}/_apis/projects?api-version=7.1" #OK
     response = requests.get(url, headers=get_headers())
 
     if response.status_code == 200:
@@ -29,21 +29,21 @@ def get_projects():
     return {"error": "Falha ao obter dados do Azure DevOps"}
 
 def select_project(project_id:str):
-    url = f"{AZURE_DEVOPS_URL}/_apis/projects/{project_id}?api-version=6.0"
+    url = f"{AZURE_DEVOPS_URL}/_apis/projects/{project_id}?api-version=7.1" #OK
     response = requests.get(url, headers=get_headers())
     if response.status_code == 200:
         return response.json()
     return {"error": "Falha ao obter dados do projeto {project_id}"}
 
 def get_project_status(project_id:str):
-    url = f"{AZURE_DEVOPS_URL}/_apis/build/builds?project={project_id}&api-version=7.1"
+    url = f"{AZURE_DEVOPS_URL}/_apis/build/builds?api-version=7.1"
     response = requests.get(url, headers=get_headers())
     if response.status_code == 200:
         return response.json()
     return {"error": "Falha ao obter dados do projeto {project_id}"}
 
 def get_overdue_tasks(project_id:str):
-    url = f"{AZURE_DEVOPS_URL}/_apis/wit/wiql?api-version=6.0"
+    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/wiql?api-version=7.1" 
     query = {
         "query": "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.State] = 'To Do' AND [System.CreatedDate] < @Today" 
     }
@@ -53,7 +53,7 @@ def get_overdue_tasks(project_id:str):
     return {"error": f"Falha ao obter tarefas atrasadas do projeto {project_id}"}
 
 def get_work_hours(project_id:str):
-    url = f"{AZURE_DEVOPS_URL}/_apis/git/repositories/{project_id}/commits?searchCriteria.itemVersion.versionType=commit&api-version=6.0"
+    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/git/repositories?api-version=7.1" #ok mas errado
     response = requests.get(url, headers=get_headers())
     if response.status_code == 200:
         commits = response.json()
@@ -62,7 +62,7 @@ def get_work_hours(project_id:str):
     return {"error": f"Falha ao obter as horas trabalhadas do projeto {project_id}"}
 
 def get_daily_tasks(project_id:str):
-    url: f"{AZURE_DEVOPS_URL};{project_id}/_apis/wit/wiql?api-version=6.0"
+    url: f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/wiql?api-version=7.1"
     query = {
         "query": "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.State] = 'In Progress' AND [System.CreatedDate] < @Today" 
     }
@@ -71,8 +71,8 @@ def get_daily_tasks(project_id:str):
         return response.json()
     return {"error": f"Falha ao obter tarefas diárias"}
 
-def get_team(project_id:str):
-    url: f"{AZURE_DEVOPS_URL};{project_id}/_apis/projects/{project_id}/teams?api-version=6.0"
+def get_teams(project_id:str):
+    url: f"{AZURE_DEVOPS_URL}/_apis/projects/{project_id}/teams?api-version=7.1"  #OK
     response = requests.post(url, headers=get_headers())
     if response.status_code == 200:
         return response.json()
@@ -83,7 +83,7 @@ def get_project_info(project_id:str):
     overdue_tasks = get_overdue_tasks(project_id)
     work_hours = get_work_hours(project_id)
     daily_tasks = get_daily_tasks(project_id)
-    team_info = get_team(project_id)
+    team_info = get_teams(project_id)
 
     return{
         "project_status": project_status,
