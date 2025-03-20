@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat con la Computadora</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body {
             background-color: #f8f9fa;
@@ -73,6 +74,9 @@
         </div>
     </div>
 </div>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
 <script>
     document.getElementById('send-button').addEventListener('click', sendMessage);
@@ -91,9 +95,10 @@
             addMessage('user', message);
             userInput.value = '';
 
-            // Simular respuesta de la computadora
+            // Simular respuesta de la computadora en Markdown
             setTimeout(() => {
-                addMessage('computer', 'Respuesta de la computadora: ' + message);
+                const markdownResponse = "Esta es una respuesta simulada en Markdown. [Enlace](https://www.example.com)";
+                addMarkdownMessage('computer', markdownResponse);
             }, 1000);
         }
     }
@@ -102,14 +107,17 @@
         const chatBox = document.getElementById('chat-box');
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', sender);
-        messageDiv.textContent = message;
+        messageDiv.innerHTML = message; // Usar innerHTML para mensajes simples
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight; // Desplazar hacia abajo
     }
+
+    function addMarkdownMessage(sender, markdown) {
+        const html = marked.parse(markdown); // Convertir Markdown a HTML
+        console.log(html);
+        addMessage(sender, html); // Agregar el mensaje convertido
+    }
 </script>
 
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
