@@ -3,7 +3,6 @@
 This app template is built on top of [Teams AI library](https://aka.ms/teams-ai-library).
 This template showcases a bot app that responds to user questions like an AI assistant. This enables your users to talk with the AI assistant in Teams to find information.
 
-
 ## Get started with the template
 
 > **Prerequisites**
