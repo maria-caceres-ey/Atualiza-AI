@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat con la Computadora</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .chat-container {
+            max-width: 600px;
+            margin: 50px auto;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #f7d94c, #6bff6b, #6bb3ff);
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+        }
+        .chat-box {
+            height: 400px;
+            overflow-y: scroll;
+            padding: 15px;
+            border-bottom: 1px solid #ced4da;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 15px;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+        .message.user {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+        .message.computer {
+            background-color: #e9ecef;
+            color: black;
+            margin-right: auto;
+        }
+        .input-group {
+            padding: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="icon">
+        💬
+    </div>
+    <div class="chat-box" id="chat-box">
+        <!-- Mensajes se agregarán aquí -->
+    </div>
+    <div class="input-group">
+        <input type="text" id="user-input" class="form-control" placeholder="Escribe tu mensaje...">
+        <div class="input-group-append">
+            <button class="btn btn-primary" id="send-button">Enviar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('send-button').addEventListener('click', sendMessage);
+    document.getElementById('user-input').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    function sendMessage() {
+        const userInput = document.getElementById('user-input');
+        const message = userInput.value;
+
+        if (message) {
+            // Agregar mensaje del usuario
+            addMessage('user', message);
+            userInput.value = '';
+
+            // Simular respuesta de la computadora
+            setTimeout(() => {
+                addMessage('computer', 'Respuesta de la computadora: ' + message);
+            }, 1000);
+        }
+    }
+
+    function addMessage(sender, message) {
+        const chatBox = document.getElementById('chat-box');
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', sender);
+        messageDiv.textContent = message;
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight; // Desplazar hacia abajo
+    }
+</script>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
