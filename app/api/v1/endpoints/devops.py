@@ -15,6 +15,21 @@ from app.core.devops_models import *
 
 router = APIRouter()
 
+"""
+|Pronto | Rota                                       | Descrição                                         |
+|------ |------------------------------------------- |---------------------------------------------------|
+| ✅   | `/projects`                                 | Lista todos os projetos.                          |
+| ✅   | `/projects/{project_id}`                    | Obtém os detalhes de um projeto específico.       |
+| ❌   | `/projects/{project_id}/status`             | Obtém o status de um projeto específico.          |
+| ❌   | `/projects/{project_id}/overdue_tasks`      | Obtém as tarefas vencidas de um projeto.          |
+| ❌   | `/projects/{project_id}/work_hours/{repository_id}` | Obtém as horas de trabalho de um projeto. |
+| ❌   | `/projects/{project_id}/daily_tasks`        | Obtém as tarefas diárias de um projeto.           |
+| ❌   | `/projects/{project_id}/team`               | Obtém informações sobre todas as equipes em um projeto. |
+| ✅   | `/projects/{project_id}/members/{team_id}`  | Obtém todos os membros de uma equipe específica. |
+| ❌   | `/project_info/{project_id}/{repository_id}`| Obtém informações do projeto e repositório.    |
+"""
+
+
 @router.get("/projects", response_model=List[Dict[str, Any]])
 async def list_projects():
    #{AZURE_DEVOPS_URL}/_apis/projects?api-version=7.1
