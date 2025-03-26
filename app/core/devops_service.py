@@ -8,7 +8,7 @@ AZURE_DEVOPS_TOKEN = os.getenv("AZURE_DEVOPS_TOKEN")
 def get_headers():
     return {
         "Content-Type": "application/json",
-        "Authorization": f"Basic {AZURE_DEVOPS_TOKEN}",
+        "Authorization": f"Bearer {AZURE_DEVOPS_TOKEN}",#Se cambio por bearer
     }
 
 def get_projects():
@@ -150,7 +150,14 @@ def get_teams(project_id:str):
     response = requests.post(url, headers=get_headers())
     if response.status_code == 200:
         return response.json()
-    return {"error": f"Falha ao obter informações sobre a equipe do projeto {project_id}"}
+    return {"error": f"Falha ao obter informações sobre os times do projeto {project_id}"}
+
+def get_team_members(project_id:str, team_id:str):
+    url = f"{AZURE_DEVOPS_URL}/_apis/projects/{project_id}/teams/{team_id}/members?api-version=7.1" #OK
+    response = requests.get(url, headers=get_headers())
+    if response.status_code == 200 and "value" in response.json():
+        return response.json()
+    return {"error": f"Falha ao obter informações sobre os membros da equipe {team_id} do projeto {project_id}"}
 
 def get_project_info(project_id:str, repository_id:str):
     project_status = get_project_status(project_id)

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat con la Computadora</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .chat-container {
+            max-width: 600px;
+            margin: 50px auto;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ffe600,#ffe600,#ff7d1e, #ff32ff,  #32ffff);
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+        }
+        .chat-box {
+            height: 400px;
+            overflow-y: scroll;
+            padding: 15px;
+            border-bottom: 1px solid #ced4da;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 15px;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+        .message.user {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+        .message.computer {
+            background-color: #e9ecef;
+            color: black;
+            margin-right: auto;
+        }
+        .input-group {
+            padding: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="icon">
+        
+    </div>
+    <div class="chat-box" id="chat-box">
+        <!-- Mensajes se agregarán aquí -->
+    </div>
+    <div class="input-group">
+        <input type="text" id="user-input" class="form-control" placeholder="Escribe tu mensaje...">
+        <div class="input-group-append">
+            <button class="btn btn-primary" id="send-button">Enviar</button>
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+    document.getElementById('send-button').addEventListener('click', sendMessage);
+    document.getElementById('user-input').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    function sendMessage() {
+        const userInput = document.getElementById('user-input');
+        const message = userInput.value;
+
+        if (message) {
+            // Agregar mensaje del usuario
+            addMessage('user', message);
+            userInput.value = '';
+
+            fetch('http://localhost:8000/interfaz/proccess', { // Cambia el endpoint según tu API
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: message }) // Enviar la consulta en el cuerpo
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json(); // Cambiar a json ya que la respuesta es un objeto
+            })
+            .then(data => {
+                console.log(data);
+                const markdownResponse = data.seleccion; // Usar el mensaje de la respuesta
+                addMarkdownMessage('computer', markdownResponse);
+            })
+            .catch(error => {
+                console.error('Hubo un problema con la solicitud Fetch:', error);
+                const errorMessage = "Lo sentimos, tenemos problemas con el servidor.";
+                addMarkdownMessage('computer', errorMessage);
+            });
+        }
+
+    }
+
+    function addMessage(sender, message) {
+        const chatBox = document.getElementById('chat-box');
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', sender);
+        messageDiv.innerHTML = message; // Usar innerHTML para mensajes simples
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight; // Desplazar hacia abajo
+    }
+
+    function addMarkdownMessage(sender, markdown) {
+        const html = marked.parse(markdown); // Convertir Markdown a HTML
+        console.log(html);
+        addMessage(sender, html); // Agregar el mensaje convertido
+    }
+</script>
+
+</body>
+</html>

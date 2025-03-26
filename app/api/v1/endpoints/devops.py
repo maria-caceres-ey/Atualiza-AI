@@ -8,13 +8,31 @@ from app.core.devops_service import (
    get_work_hours, 
    get_daily_tasks, 
    get_teams, 
-   get_project_info
+   get_project_info,
+   get_team_members
 )
+from app.core.devops_models import *
 
 router = APIRouter()
 
+"""
+|Pronto | Rota                                       | Descrição                                         |
+|------ |------------------------------------------- |---------------------------------------------------|
+| ✅   | `/projects`                                 | Lista todos os projetos.                          |
+| ✅   | `/projects/{project_id}`                    | Obtém os detalhes de um projeto específico.       |
+| ❌   | `/projects/{project_id}/status`             | Obtém o status de um projeto específico.          |
+| ❌   | `/projects/{project_id}/overdue_tasks`      | Obtém as tarefas vencidas de um projeto.          |
+| ❌   | `/projects/{project_id}/work_hours/{repository_id}` | Obtém as horas de trabalho de um projeto. |
+| ❌   | `/projects/{project_id}/daily_tasks`        | Obtém as tarefas diárias de um projeto.           |
+| ❌   | `/projects/{project_id}/team`               | Obtém informações sobre todas as equipes em um projeto. |
+| ✅   | `/projects/{project_id}/members/{team_id}`  | Obtém todos os membros de uma equipe específica. |
+| ❌   | `/project_info/{project_id}/{repository_id}`| Obtém informações do projeto e repositório.    |
+"""
+
+
 @router.get("/projects", response_model=List[Dict[str, Any]])
 async def list_projects():
+   #{AZURE_DEVOPS_URL}/_apis/projects?api-version=7.1
    projects = get_projects()
    if "error" in projects:
        raise HTTPException(status_code=500, detail=projects["error"])
@@ -22,6 +40,7 @@ async def list_projects():
 
 @router.get("/projects/{project_id}", response_model=Dict[str, Any])
 async def project_details(project_id: str):
+   #{AZURE_DEVOPS_URL}/_apis/projects/{project_id}?api-version=7.1
    project = select_project(project_id)
    if "error" in project:
        raise HTTPException(status_code=404, detail=project["error"])
@@ -57,10 +76,19 @@ async def daily_tasks(project_id: str):
 
 @router.get("/projects/{project_id}/team", response_model=Dict[str, Any])
 async def project_team(project_id: str):
+   # Returns all teams in a project
    team_info = get_teams(project_id)
    if "error" in team_info:
        raise HTTPException(status_code=500, detail=team_info["error"])
    return team_info
+
+@router.get("/projects/{project_id}/members/{team_id}", response_model=Dict[str, Any])
+async def team_members(project_id: str, team_id: str):
+   # Returns all members of a team
+   team_members = get_team_members(project_id, team_id)
+   if "error" in team_members:
+       raise HTTPException(status_code=500, detail=team_members["error"])
+   return team_members
 
 @router.get("/project_info/{project_id}/{repository_id}", response_model=Dict[str, Any])
 async def project_info(project_id: str, repository_id: str):
@@ -68,3 +96,9 @@ async def project_info(project_id: str, repository_id: str):
    if "error" in info:
        raise HTTPException(status_code=500, detail=info["error"])
    return info
+
+## Data to test
+'''
+project_id = e4005fd0-7b95-4391-8486-c4b21c935b2e
+team_id = 9083e8b0-af44-4f90-9bdd-f54f9bb431f2
+'''
