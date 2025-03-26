@@ -22,7 +22,7 @@
             width: 60px;
             height: 60px;
             border-radius: 50%;
-            background: linear-gradient(45deg, #ff6b6b, #f7d94c, #6bff6b, #6bb3ff);
+            background: linear-gradient(45deg, #ffe600,#ffe600,#ff7d1e, #ff32ff,  #32ffff);
             margin: 20px auto;
             display: flex;
             justify-content: center;
@@ -62,7 +62,7 @@
 
 <div class="chat-container">
     <div class="icon">
-        💬
+        
     </div>
     <div class="chat-box" id="chat-box">
         <!-- Mensajes se agregarán aquí -->
@@ -95,12 +95,31 @@
             addMessage('user', message);
             userInput.value = '';
 
-            // Simular respuesta de la computadora en Markdown
-            setTimeout(() => {
-                const markdownResponse = "Esta es una respuesta simulada en Markdown. [Enlace](https://www.example.com)";
+            fetch('http://localhost:8000/interfaz/proccess', { // Cambia el endpoint según tu API
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: message }) // Enviar la consulta en el cuerpo
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json(); // Cambiar a json ya que la respuesta es un objeto
+            })
+            .then(data => {
+                console.log(data);
+                const markdownResponse = data.seleccion; // Usar el mensaje de la respuesta
                 addMarkdownMessage('computer', markdownResponse);
-            }, 1000);
+            })
+            .catch(error => {
+                console.error('Hubo un problema con la solicitud Fetch:', error);
+                const errorMessage = "Lo sentimos, tenemos problemas con el servidor.";
+                addMarkdownMessage('computer', errorMessage);
+            });
         }
+
     }
 
     function addMessage(sender, message) {

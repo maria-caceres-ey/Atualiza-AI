@@ -63,7 +63,7 @@ class Interfaz:
             )
 
 
-    def get_selection(self, sentence: str, options: list[Selection]=None) -> str:
+    async def get_selection(self, sentence: str, options: list[Selection]=None) -> str:
         options = options or self.options_principal
         options_text = "\n".join([f"{opt.name} : {opt.id}" for opt in options])
 
@@ -90,11 +90,16 @@ class Interfaz:
                 except json.JSONDecodeError:
                     pass
 
-        return self.options_principal[-1]
+        return { "id" : self.options_principal[-1].id, "name":self.options_principal[-1].name}
 
 # Ejemplo de uso
-if __name__ == "__main__":
+import asyncio
+
+async def main():
     interfaz = Interfaz()
-    result = interfaz.get_selection("Qual e o equipe do projeto?")
+    result = await interfaz.get_selection("Qual e o equipe do projeto?")
     print(result)
+
+if __name__ == "__main__":
+    asyncio.run(main())
 
