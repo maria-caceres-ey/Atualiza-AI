@@ -1,6 +1,7 @@
 import requests
 import os
 from datetime import datetime, timedelta
+import json
 
 AZURE_DEVOPS_URL = os.getenv("AZURE_DEVOPS_URL")
 AZURE_DEVOPS_TOKEN = os.getenv("AZURE_DEVOPS_TOKEN")
@@ -59,27 +60,50 @@ def get_project_status(project_id:str):
        print(f"Erro ao consultar a API: {e}")
 
 def get_overdue_tasks(project_id:str):
-    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/workitems?api-version=7.1" #testando, ainda não está pegando as infos necessarias
-   
-    params = {
-       "api-version": "7.1",
-       "$filter": "Microsoft.VSTS.Scheduling.TargetDate lt '2025-03-13T00:00:00Z'" 
+    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/wiql?api-version=7.1"
+
+    today = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    wiql_query = {
+    "query": f"""
+    SELECT [System.Id], [System.Title], [System.AssignedTo], [System.State], [Microsoft.VSTS.Scheduling.TargetDate] 
+    FROM WorkItems 
+    WHERE [System.WorkItemType] = 'Task' 
+    AND [Microsoft.VSTS.Scheduling.TargetDate] < '{today}'
+    AND [System.State] NOT IN ('Completed', 'Removed', 'Closed')
+    """
     }
+
     try:
-       response = requests.get(url, headers=get_headers(), params=params)
-       response.raise_for_status() 
-       
-       data = response.json()
-       if "count" in data and data["count"] > 0:
-           overdue_tasks = data["value"]
-           print(f"Total de cards atrasados: {len(overdue_tasks)}")
-           for task in overdue_tasks:
-               title = task["fields"].get("System.Title", "Sem título")
-               print(f"- {title}")
-       else:
-           print("Nenhum card atrasado encontrado.")
+        response = requests.post(url, headers= get_headers(), data=json.dumps(wiql_query))
+        response.raise_for_status()
+
+        data = response.json()
+
+        if "workItems" in data and len(data["workItems"]) > 0:
+            work_items = data["workItems"]
+            print(f"Total de cards atrasados: {len(work_items)}")
+            for item in work_items:
+                work_item_id = item["id"]
+
+                details_url = f"https://dev.azure.com/{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/workitems/{work_item_id}?api-version=7.1"
+                details_response = requests.get(details_url, headers=get_headers())
+                details_response.raise_for_status()
+                work_item_data = details_response.json()
+
+                title = work_item_data["fields"].get("System.Title", "Sem título")
+                assigned_to = work_item_data["fields"].get("System.AssignedTo", {}).get("displayName", "Não atribuído")
+                target_date = work_item_data["fields"].get("Microsoft.VSTS.Scheduling.TargetDate", "Data não disponível")
+
+                print(f"- {title} (Atribuído a: {assigned_to}, Target Date: {target_date})")
+
+        else:
+
+            print("Nenhum card atrasado encontrado.")
+
     except requests.exceptions.RequestException as e:
-       print(f"Erro ao consultar a API: {e}")
+
+        print(f"Erro ao consultar a API: {e}") 
 
 def get_work_hours(project_id, period="weekly"):
     url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/workitems?api-version=7.1" #testando, ainda não está pegando as infos necessarias
