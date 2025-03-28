@@ -120,30 +120,71 @@ def get_work_hours(project_id, period="weekly"):
     except requests.exceptions.RequestException as e:
        print(f"Erro ao consultar a API: {e}")
 
-def get_daily_tasks(project_id:str):
-    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/workitems?api-version=7.1" #testando, ainda não está pegando as infos necessarias
-   
-    today = datetime.today().strftime('%Y-%m-%d')
-   
-    params = {
-       "api-version": "7.1",
-       "$filter": f"System.CreatedDate ge '{today}T00:00:00Z'"  
+def get_user_daily_tasks(project_id:str, userName:str):
+    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/wiql?api-version=7.1"
+    query = {
+        "query": f"""SELECT
+        [System.Id],
+        [System.WorkItemType],
+        [System.Title],
+        [System.AssignedTo],
+        [System.State],
+        [System.Tags],
+        [Microsoft.VSTS.Scheduling.CompletedWork],
+        [Microsoft.VSTS.Scheduling.TargetDate]
+    FROM workitems
+    WHERE
+        [System.TeamProject] = 'Generative AI'
+        AND [System.TargetDate] = @today
+        AND [System.WorkItemType] = 'Task'
+        AND [System.AssignedTo] = '{userName}'
+    ORDER BY [System.Id] asc
+    """
     }
+
     try:
-       response = requests.get(url, headers=get_headers(), params=params)
-       response.raise_for_status()  
-       
-       data = response.json()
-       if "count" in data and data["count"] > 0:
-           daily_tasks = data["value"]
-           print(f"Total de atividades do dia: {len(daily_tasks)}")
-           for task in daily_tasks:
-               title = task["fields"].get("System.Title", "Sem título")
-               print(f"- {title}")
-       else:
-           print("Nenhuma atividade registrada hoje.")
+        response = requests.post(url, headers=get_headers(), json=query)
+        response.raise_for_status()  
+        
+        data = response.json()
+        return data
     except requests.exceptions.RequestException as e:
-       print(f"Erro ao consultar a API: {e}")
+        print(f"Erro ao consultar a API: {e}")
+    
+    return {}
+
+
+def get_daily_tasks(project_id:str):
+    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/wiql?api-version=7.1"
+    query = {
+        "query": f"""SELECT
+        [System.Id],
+        [System.WorkItemType],
+        [System.Title],
+        [System.AssignedTo],
+        [System.State],
+        [System.Tags],
+        [Microsoft.VSTS.Scheduling.CompletedWork],
+        [Microsoft.VSTS.Scheduling.TargetDate]
+    FROM workitems
+    WHERE
+        [System.TeamProject] = 'Generative AI'
+        AND [System.TargetDate] = @today
+        AND [System.WorkItemType] = 'Task'
+    ORDER BY [System.Id] asc
+    """
+    }
+
+    try:
+        response = requests.post(url, headers=get_headers(), json=query)
+        response.raise_for_status()  
+        
+        data = response.json()
+        return data
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao consultar a API: {e}")
+
+    return {}
 
 def get_teams(project_id:str):
     url: f"{AZURE_DEVOPS_URL}/_apis/projects/{project_id}/teams?api-version=7.1"  #OK

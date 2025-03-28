@@ -21,9 +21,10 @@ router = APIRouter()
 | ✅   | `/projects`                                 | Lista todos os projetos.                          |
 | ✅   | `/projects/{project_id}`                    | Obtém os detalhes de um projeto específico.       |
 | ❌   | `/projects/{project_id}/status`             | Obtém o status de um projeto específico.          |
-| ❌   | `/projects/{project_id}/overdue_tasks`      | Obtém as tarefas vencidas de um projeto.          |
+| ✅   | `/projects/{project_id}/overdue_tasks`      | Obtém as tarefas vencidas de um projeto.          |
 | ❌   | `/projects/{project_id}/work_hours/{repository_id}` | Obtém as horas de trabalho de um projeto. |
-| ❌   | `/projects/{project_id}/daily_tasks`        | Obtém as tarefas diárias de um projeto.           |
+| ✅   | `/projects/{project_id}/daily_tasks`        | Obtém as tarefas diárias de um projeto.           |
+| ✅   | `/projects/{project_id}/daily_tasks/{user_id}`| Obtém as tarefas diárias de uma pessoa de um projeto. |
 | ❌   | `/projects/{project_id}/team`               | Obtém informações sobre todas as equipes em um projeto. |
 | ✅   | `/projects/{project_id}/members/{team_id}`  | Obtém todos os membros de uma equipe específica. |
 | ❌   | `/project_info/{project_id}/{repository_id}`| Obtém informações do projeto e repositório.    |
@@ -67,9 +68,16 @@ async def work_hours(project_id: str, repository_id: str):
        raise HTTPException(status_code=500, detail=hours["error"])
    return hours
 
-@router.post("/projects/{project_id}/daily_tasks", response_model=Dict[str, Any])
+@router.get("/projects/{project_id}/daily_tasks", response_model=Dict[str, Any])
 async def daily_tasks(project_id: str):
    tasks = get_daily_tasks(project_id)
+   if "error" in tasks:
+       raise HTTPException(status_code=500, detail=tasks["error"])
+   return tasks
+
+@router.get("/projects/{project_id}/daily_tasks/{userName}", response_model=Dict[str, Any])
+async def daily_tasks(project_id: str, userName:str):
+   tasks = get_daily_tasks(project_id, userName)
    if "error" in tasks:
        raise HTTPException(status_code=500, detail=tasks["error"])
    return tasks
