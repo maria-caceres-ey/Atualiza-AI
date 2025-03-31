@@ -9,7 +9,9 @@ from app.core.devops_service import (
    get_daily_tasks, 
    get_teams, 
    get_project_info,
-   get_team_members
+   get_team_members,
+   get_workitems_batch,
+   get_user_daily_tasks
 )
 from app.core.devops_models import *
 
@@ -31,7 +33,7 @@ router = APIRouter()
 """
 
 
-@router.get("/projects", response_model=List[Dict[str, Any]])
+@router.get("/projects", response_model=List[Project])
 async def list_projects():
    #{AZURE_DEVOPS_URL}/_apis/projects?api-version=7.1
    projects = get_projects()
@@ -39,7 +41,7 @@ async def list_projects():
        raise HTTPException(status_code=500, detail=projects["error"])
    return projects
 
-@router.get("/projects/{project_id}", response_model=Dict[str, Any])
+@router.get("/projects/{project_id}", response_model=Project)
 async def project_details(project_id: str):
    #{AZURE_DEVOPS_URL}/_apis/projects/{project_id}?api-version=7.1
    project = select_project(project_id)
@@ -54,7 +56,15 @@ async def project_status(project_id: str):
        raise HTTPException(status_code=500, detail=status["error"])
    return status
 
-@router.post("/projects/{project_id}/overdue_tasks", response_model=Dict[str, Any])
+@router.get("/projects/{project_id}/workitems_batch", response_model=Dict[str, Any])
+async def workitems_batch(project_id: str, work_item_ids: List[int]):
+   # Returns all work items in a project
+   work_items = get_workitems_batch(project_id, work_item_ids)
+   if "error" in work_items:
+       raise HTTPException(status_code=500, detail=work_items["error"])
+   return work_items
+
+@router.post("/projects/{project_id}/overdue_tasks", response_model=Dict[str, Any])#TODO
 async def overdue_tasks(project_id: str):
    tasks = get_overdue_tasks(project_id)
    if "error" in tasks:
@@ -70,14 +80,14 @@ async def work_hours(project_id: str, repository_id: str):
 
 @router.get("/projects/{project_id}/daily_tasks", response_model=Dict[str, Any])
 async def daily_tasks(project_id: str):
-   tasks = get_daily_tasks(project_id)
+   tasks = await get_daily_tasks(project_id)
    if "error" in tasks:
        raise HTTPException(status_code=500, detail=tasks["error"])
    return tasks
 
 @router.get("/projects/{project_id}/daily_tasks/{userName}", response_model=Dict[str, Any])
 async def daily_tasks(project_id: str, userName:str):
-   tasks = get_daily_tasks(project_id, userName)
+   tasks = await get_user_daily_tasks(project_id, userName)
    if "error" in tasks:
        raise HTTPException(status_code=500, detail=tasks["error"])
    return tasks
