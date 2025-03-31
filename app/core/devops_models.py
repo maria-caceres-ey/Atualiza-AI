@@ -1,19 +1,21 @@
 import requests
 import pprint
 import os
+from pydantic import BaseModel, Field
+from typing import Optional, Any, Dict, List
 
-class Project:
-    def __init__(self, abbreviation, defaultTeamImageUrl, description, id, lastUpdateTime, name, revision, state, url, visibility):
-        self.abbreviation = abbreviation
-        self.defaultTeamImageUrl = defaultTeamImageUrl
-        self.description = description
-        self.id = id
-        self.lastUpdateTime = lastUpdateTime
-        self.name = name
-        self.revision = revision
-        self.state = state
-        self.url = url
-        self.visibility = visibility
+class Project(BaseModel):
+    abbreviation: Optional[str]
+    defaultTeamImageUrl: Optional[str]
+    description: Optional[str]
+    id: Optional[str]
+    lastUpdateTime: Optional[str]
+    name: Optional[str]
+    revision: Optional[int]
+    state: Optional[str]
+    url: Optional[str]
+    web: Optional[str]
+    visibility: Optional[str]
 
     def __repr__(self):
         return (
@@ -36,9 +38,10 @@ class Project:
             state=json_data.get("state"),
             url=json_data.get("url"),
             visibility=json_data.get("visibility"),
+            web=json_data.get("web"),
         )
-    
-class WebApiTeam:
+        
+class WebApiTeam(BaseModel):
     '''
     ALL TEAMS 
     GET https://dev.azure.com/{organization}/_apis/teams?api-version=7.2-preview.3
@@ -46,15 +49,14 @@ class WebApiTeam:
     GET https://dev.azure.com/{organization}/_apis/teams?api-version=7.2-preview.3
 
     '''
-    def __init__(self, description, id, identity, identityUrl, name, projectId, projectName, url):
-        self.description = description
-        self.id = id
-        self.identity = identity
-        self.identityUrl = identityUrl
-        self.name = name
-        self.projectId = projectId
-        self.projectName = projectName
-        self.url = url
+    description: Optional[str]
+    id: Optional[str]
+    identity: Optional[Any]
+    identityUrl: Optional[str]
+    name: Optional[str]
+    projectId: Optional[str]
+    projectName: Optional[str]
+    url: Optional[str]
 
     def __repr__(self):
         return (
@@ -77,21 +79,27 @@ class WebApiTeam:
         )
     
 #Team member
-class IdentityRef:
-    def __init__(self, _links, descriptor, directoryAlias, displayName, id, imageUrl, inactive, isAadIdentity, isContainer, isDeletedInOrigin, profileUrl, uniqueName, url):
-        self._links = _links
-        self.descriptor = descriptor
-        self.directoryAlias = directoryAlias
-        self.displayName = displayName
-        self.id = id
-        self.imageUrl = imageUrl
-        self.inactive = inactive
-        self.isAadIdentity = isAadIdentity
-        self.isContainer = isContainer
-        self.isDeletedInOrigin = isDeletedInOrigin
-        self.profileUrl = profileUrl
-        self.uniqueName = uniqueName
-        self.url = url
+class IdentityRef(BaseModel):
+    _links: Optional[Any]
+    descriptor: Optional[str]
+    directoryAlias: Optional[str]
+    displayName: Optional[str]
+    id: Optional[str]
+    imageUrl: Optional[str]
+    inactive: Optional[bool]
+    isAadIdentity: Optional[bool]
+    isContainer: Optional[bool]
+    isDeletedInOrigin: Optional[bool]
+    profileUrl: Optional[str]
+    uniqueName: Optional[str]
+    url: Optional[str]
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "displayName": self.displayName,
+            "imageUrl": self.imageUrl,
+        }
 
     def __repr__(self):
         return (
@@ -118,18 +126,18 @@ class IdentityRef:
             uniqueName=json_data.get("uniqueName"),
             url=json_data.get("url"),
         )
-    
+
+class TeamMember(BaseModel):
+    identity: Optional[IdentityRef]
+    isTeamAdmin: Optional[bool]
+
     def to_dict(self):
         return {
-            "id": self.id,
-            "displayName": self.displayName,
-            "imageUrl": self.imageUrl,
+            "isTeamAdmin": self.isTeamAdmin == True,
+            "id": self.identity.id if self.identity else None,
+            "displayName": self.identity.displayName if self.identity else None,
+            "imageUrl": self.identity.imageUrl if self.identity else None,
         }
-
-class TeamMember:
-    def __init__(self, identity, isTeamAdmin):
-        self.identity = identity
-        self.isTeamAdmin = isTeamAdmin
 
     def __repr__(self):
         return f"TeamMember(identity={self.identity}, isTeamAdmin={self.isTeamAdmin})"
@@ -149,29 +157,30 @@ class TeamMember:
             "imageUrl": self.identity.imageUrl,
         }
 
-class WorkItem:
-    def __init__(self, _links, commentVersionRef, fields, id, relations, rev, url, organization=None, project=None):
-        self._links = _links
-        self.commentVersionRef = commentVersionRef
-        self.fields = fields
-        self.id = id
-        self.relations = relations
-        self.rev = rev
-        self.url = url
+class WorkItem(BaseModel):
+    _links: Optional[Any]
+    commentVersionRef: Optional[Any]
+    fields: Optional[Dict[str, Any]]
+    id: Optional[int]
+    relations: Optional[List[Any]]
+    rev: Optional[int]
+    url: Optional[str]
+    organization: Optional[str] = None
+    project: Optional[str] = None
+    completedHours: Optional[float] = None
+    title: Optional[str] = None
+    state: Optional[str] = None
 
-        self.organization = organization
-        self.project = project
-
-    def getDetails(self,headers):
-        #Makes a request to get the details we need
-        response = requests.get(self.url, headers=headers)#Cuidado con el header
-        pprint.pprint(response.json())
-        print("processing fields")
+    def getDetails(self, headers):
+        response = requests.get(self.url, headers=headers)
+        fields = response.json().get("fields")
+        self.completedHours = fields.get("Microsoft.VSTS.Scheduling.CompletedWork")
+        self.title = fields.get("System.Title")
+        self.state = fields.get("System.State")
 
     def __repr__(self):
         return (
-            f"WorkItem(id={self.id}, rev={self.rev}, url={self.url}, "
-            f"fields={self.fields}, relations={self.relations})"
+            f"WorkItem(id={self.id}, url={self.url}, title={self.title}, state={self.state}, completedHours={self.completedHours})"
         )
 
     @classmethod
