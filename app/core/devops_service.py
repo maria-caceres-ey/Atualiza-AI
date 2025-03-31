@@ -105,44 +105,56 @@ def get_overdue_tasks(project_id:str):
 
         print(f"Erro ao consultar a API: {e}") 
 
-def get_work_hours(project_id, period="weekly"):
-    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/workitems?api-version=7.1" #testando, ainda não está pegando as infos necessarias
-   
-    today = datetime.today()
-    if period == "weekly":
-       start_date = today - timedelta(days=7)
-    elif period == "monthly":
-       start_date = today.replace(day=1)  
-    else:
-       raise ValueError("Período inválido. Use 'weekly' ou 'monthly'.")
-   
-    params = {
-       "api-version": "7.1",
-       "$filter": f"System.ChangedDate ge '{start_date.strftime('%Y-%m-%d')}T00:00:00Z'"
+def get_work_hours(project_id):
+    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/wiql?api-version=7.1" 
+    wiql_query = {
+        "query": """
+        SELECT [System.Id], [System.Title], [System.AssignedTo], [Microsoft.VSTS.Scheduling.CompletedWork]
+        FROM WorkItems
+        WHERE [System.WorkItemType] = 'Task'
+        AND [Microsoft.VSTS.Scheduling.CompletedWork] > 0
+        """
     }
     try:
-       response = requests.get(url, headers=get_headers(), params=params)
-       response.raise_for_status()  
-       data = response.json()
-       if "count" in data and data["count"] > 0:
-           work_items = data["value"]
-           total_completed = 0
-           total_estimated = 0
-           total_remaining = 0
+        print("Enviando consulta WIQL para obter horas trabalhadas...")
+        response = requests.post(url, headers=get_headers(), data=json.dumps(wiql_query))
+        print("Resposta da requisição WIQL:", response.status_code)
         
-           for item in work_items:
-               fields = item.get("fields", {})
-               total_completed += fields.get("Microsoft.VSTS.Scheduling.CompletedWork", 0)
-               total_estimated += fields.get("Microsoft.VSTS.Scheduling.OriginalEstimate", 0)
-               total_remaining += fields.get("Microsoft.VSTS.Scheduling.RemainingWork", 0)
-           print(f"Período: {period.capitalize()}")
-           print(f"- Horas Trabalhadas: {total_completed}h")
-           print(f"- Horas Estimadas: {total_estimated}h")
-           print(f"- Horas Restantes: {total_remaining}h")
-       else:
-           print("Nenhuma informação de horas encontrada no período.")
+        if response.status_code != 200:
+            print("Erro na requisição:", response.text)
+            return
+        data = response.json()
+        print("Dados retornados pela API:", json.dumps(data, indent=4))
+        
+        if "workItems" in data and len(data["workItems"]) > 0:
+            work_items = data["workItems"]
+            work_hours_per_person = {}
+            for item in work_items:
+                work_item_id = item["id"]
+                details_url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/workitems/{work_item_id}?api-version=7.1"
+                details_response = requests.get(details_url, headers=get_headers())
+            
+                if details_response.status_code != 200:
+                    print(f"Erro ao obter detalhes do WorkItem {work_item_id}: {details_response.text}")
+                    continue
+                work_item_data = details_response.json()
+        
+                title = work_item_data["fields"].get("System.Title", "Sem título")
+                assigned_to = work_item_data["fields"].get("System.AssignedTo", {}).get("displayName", "Não atribuído")
+                completed_work = work_item_data["fields"].get("Microsoft.VSTS.Scheduling.CompletedWork", 0)
+            
+                if assigned_to not in work_hours_per_person:
+                    work_hours_per_person[assigned_to] = 0
+                work_hours_per_person[assigned_to] += completed_work
+                print(f"- {title}: {completed_work} horas (Atribuído a: {assigned_to})")
+        
+            print("\nHoras trabalhadas por pessoa no projeto:")
+            for person, hours in work_hours_per_person.items():
+                print(f"- {person}: {hours} horas")
+        else:
+            print("Nenhuma tarefa com horas trabalhadas encontrada.")
     except requests.exceptions.RequestException as e:
-       print(f"Erro ao consultar a API: {e}")
+        print(f"Erro ao consultar a API: {e}")
 
 def get_daily_tasks(project_id:str):
     url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/workitems?api-version=7.1" #testando, ainda não está pegando as infos necessarias
