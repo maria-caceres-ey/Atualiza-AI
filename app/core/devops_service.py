@@ -206,7 +206,9 @@ async def get_daily_tasks(project_id:str):
     FROM workitems
     WHERE
         [System.TeamProject] = 'Generative AI'
-        AND [Microsoft.VSTS.Scheduling.TargetDate] = @today
+        AND [Microsoft.VSTS.Scheduling.TargetDate] < @today
+        AND [Microsoft.VSTS.Scheduling.TargetDate] > @today - 15
+
         AND [System.WorkItemType] = 'Task'
     ORDER BY [System.Id] asc
     """
