@@ -78,14 +78,14 @@ async def work_hours(project_id: str, repository_id: str):
        raise HTTPException(status_code=500, detail=hours["error"])
    return hours
 
-@router.get("/projects/{project_id}/daily_tasks", response_model=Dict[str, Any])
+@router.get("/projects/{project_id}/daily_tasks", response_model=List[Dict[str, Any]])
 async def daily_tasks(project_id: str):
    tasks = await get_daily_tasks(project_id)
    if "error" in tasks:
        raise HTTPException(status_code=500, detail=tasks["error"])
    return tasks
 
-@router.get("/projects/{project_id}/daily_tasks/{userName}", response_model=Dict[str, Any])
+@router.get("/projects/{project_id}/daily_tasks/{userName}", response_model=List[Dict[str, Any]])
 async def daily_tasks(project_id: str, userName:str):
    tasks = await get_user_daily_tasks(project_id, userName)
    if "error" in tasks:

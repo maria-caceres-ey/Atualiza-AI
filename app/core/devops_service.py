@@ -51,13 +51,13 @@ def get_project_status(project_id:str):
            for item in work_items:
                state = item["fields"].get("System.State", "Unknown")
                status_count[state] = status_count.get(state, 0) + 1
-           print("Status do Projeto:")
+           print("Status do Projeto:")#Tranquilo
            for state, count in status_count.items():
-               print(f"{state}: {count} itens")
+               print(f"{state}: {count} itens")#Toma cuidado
        else:
-           print("Nenhum work item encontrado.")
+           print("Nenhum work item encontrado.")#Tranquilo
     except requests.exceptions.RequestException as e:
-       print(f"Erro ao consultar a API: {e}")
+       print(f"Erro ao consultar a API: {e}")#Tranquilo
 
 async def get_workitems_batch(project_id:str, workitem_ids:List[int], fields:List[str]=None):
     if not fields:
@@ -75,6 +75,25 @@ async def get_workitems_batch(project_id:str, workitem_ids:List[int], fields:Lis
         
     return {"error": "Falha ao obter dados do Azure DevOps"}
 
+async def get_workitems_in_batches(project_id: str, workitem_ids: List[int], fields: List[str] = None):
+    if not fields:
+        fields = ["System.Title", "System.State", "System.AssignedTo", "Microsoft.VSTS.Scheduling.CompletedWork", "Microsoft.VSTS.Scheduling.TargetDate"]
+    
+    batch_size = 200
+    all_workitems = []
+
+    for i in range(0, len(workitem_ids), batch_size):
+        print("Batch", i // batch_size + 1)#Tranquilo
+        batch_ids = workitem_ids[i:i + batch_size]
+        batch_data = await get_workitems_batch(project_id, batch_ids, fields)
+        
+        if "error" in batch_data:
+            print(batch_data["error"])#Tranquilo
+            continue
+        
+        all_workitems.extend(batch_data.get("value", []))
+    
+    return all_workitems
 
 def get_overdue_tasks(project_id:str):
     url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/workitems?api-version=7.1" #testando, ainda não está pegando as infos necessarias
@@ -94,13 +113,13 @@ def get_overdue_tasks(project_id:str):
             print(f"Total de cards atrasados: {len(overdue_tasks)}")
             for task in overdue_tasks:
                 title = task["fields"].get("System.Title", "Sem título")
-                print(f"- {title}")
+                print(f"- {title}")#toma cuidado
 
             
         else:
-            print("Nenhum card atrasado encontrado.")
+            print("Nenhum card atrasado encontrado.")#Tranquilo
     except requests.exceptions.RequestException as e:
-       print(f"Erro ao consultar a API: {e}")
+       print(f"Erro ao consultar a API: {e}")#Tranquilo
 
 def get_work_hours(project_id, period="weekly"):
     url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/workitems?api-version=7.1" #testando, ainda não está pegando as infos necessarias
@@ -132,14 +151,14 @@ def get_work_hours(project_id, period="weekly"):
                total_completed += fields.get("Microsoft.VSTS.Scheduling.CompletedWork", 0)
                total_estimated += fields.get("Microsoft.VSTS.Scheduling.OriginalEstimate", 0)
                total_remaining += fields.get("Microsoft.VSTS.Scheduling.RemainingWork", 0)
-           print(f"Período: {period.capitalize()}")
-           print(f"- Horas Trabalhadas: {total_completed}h")
-           print(f"- Horas Estimadas: {total_estimated}h")
-           print(f"- Horas Restantes: {total_remaining}h")
+           print(f"Período: {period.capitalize()}")#Tranquilo
+           print(f"- Horas Trabalhadas: {total_completed}h")#Tranquilo
+           print(f"- Horas Estimadas: {total_estimated}h")#Tranquilo
+           print(f"- Horas Restantes: {total_remaining}h")#Tranquilo
        else:
-           print("Nenhuma informação de horas encontrada no período.")
+           print("Nenhuma informação de horas encontrada no período.")#Tranquilo
     except requests.exceptions.RequestException as e:
-       print(f"Erro ao consultar a API: {e}")
+       print(f"Erro ao consultar a API: {e}")#Tranquilo
 
 async def get_user_daily_tasks(project_id:str, userName:str):
     url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/wiql?api-version=7.1"
@@ -165,16 +184,16 @@ async def get_user_daily_tasks(project_id:str, userName:str):
         data = response.json()
 
         work_item_ids = [item["id"] for item in data.get("workItems", [])]
-        print(f"IDs dos Work Items: {work_item_ids}")
+        print(f"IDs dos Work Items: {work_item_ids}" if len(work_item_ids)<10 else f"IDs dos Work Items: {len(work_item_ids)} itens")#Tranquilo
         work_items_data = await get_workitems_batch(project_id, work_item_ids)
         
         if "error" in work_items_data:
-            print(work_items_data["error"])
+            print(work_items_data["error"])#Tranquilo
             return {}
 
         return work_items_data
     except requests.exceptions.RequestException as e:
-        print(f"Erro ao consultar a API: {e}")
+        print(f"Erro ao consultar a API: {e}")#Tranquilo
 
     return {}
 
@@ -201,16 +220,16 @@ async def get_daily_tasks(project_id:str):
         data = response.json()
 
         work_item_ids = [item["id"] for item in data.get("workItems", [])]
-        print(f"IDs dos Work Items: {work_item_ids}")
-        work_items_data = await get_workitems_batch(project_id, work_item_ids)
+        print(f"IDs dos Work Items: {work_item_ids}" if len(work_item_ids)<10 else f"IDs dos Work Items: muitos ({len(work_item_ids)})")#Tranquilo
+        work_items_data = await get_workitems_in_batches(project_id, work_item_ids)
         
         if "error" in work_items_data:
-            print(work_items_data["error"])
+            print(work_items_data["error"])#Tranquilo
             return {}
 
         return work_items_data
     except requests.exceptions.RequestException as e:
-        print(f"Erro ao consultar a API: {e}")
+        print(f"Erro ao consultar a API: {e}")#Tranquilo
 
     return {}
 
