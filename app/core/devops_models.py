@@ -21,7 +21,7 @@ class Project(BaseModel):
     defaultTeamImageUrl: Optional[str]
     description: Optional[str]
     id: Optional[str]
-    lastUpdateTime: Optional[str]
+    lastUpdateTime: Optional[datetime]
     name: Optional[str]
     revision: Optional[int]
     state: Optional[str]
@@ -39,6 +39,14 @@ class Project(BaseModel):
 
     @classmethod
     def from_json(cls, json_data):
+        lastUpdateTime = json_data.get("lastUpdateTime")
+        try:
+            lastUpdateTime = datetime.strptime(lastUpdateTime, "%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            lastUpdateTime = None
+        else:
+            lastUpdateTime = None
+
         return cls(
             abbreviation=json_data.get("abbreviation"),
             defaultTeamImageUrl=json_data.get("defaultTeamImageUrl"),

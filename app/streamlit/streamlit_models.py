@@ -25,16 +25,36 @@ class SlProject(Project):
     def __str__(self):
         return f"SlProject({self.__dict__})"
 
-    def display_in_streamlit(self):
-        """
-        Display the Project details in a Streamlit app with a clean and elegant layout.
-        """
-        st.markdown(f"### Project ID: {self.id}")
-        st.markdown(f"**Name:** {self.name}")
-        st.markdown(f"**State:** {self.state}")
-        st.markdown(f"**Description:** {self.description}")
-        st.markdown(f"**URL:** [Link to Project]({self.url})")
-        st.markdown("---")
+    def display_in_streamlit(self, selection = False):
+        with st.container(border=True):
+
+            # Título do projeto
+            st.subheader(self.name or "Nome do Projeto Desconhecido")
+
+            # Mostrar a imagem da equipe, se disponível
+            if self.defaultTeamImageUrl:
+                st.image(self.defaultTeamImageUrl, caption="Imagem da Equipe", use_container_width =True)
+
+            # Exibir informações do projeto de forma formatada
+            st.write(f"**ID:** {self.id}")
+            st.write(f"**Descrição:** {self.description or 'Não disponível'}")
+            st.write(f"**Estado:** {self.state or 'Não disponível'}")
+            if self.lastUpdateTime:
+                formatted_date_time = pd.to_datetime(self.lastUpdateTime).strftime("%d/%m/%Y %H:%M:%S")
+                st.write(f"**Última Atualização:** {formatted_date_time}")
+            else:
+                st.write(f"**Última Atualização:** Não disponível")
+            st.write(f"**Visibilidade:** {self.visibility or 'Não disponível'}")
+            #st.write(f"**Abreviatura:** {self.abbreviation or 'Não disponível'}")
+            #st.write(f"**URL do Projeto:** [Link]({self.url})" if self.url else "URL não disponível")
+            #st.write(f"**Website:** [Link]({self.web})" if self.web else "Website não disponível")
+
+            if selection:
+                if st.button("Selecionar Projeto", key=self.id):
+                    st.session_state.selected_project = self
+                    st.session_state.selected_project_id = self.id
+                    st.success(f"Você escolheu o projeto: {self.name}.")
+
 
 class SlWebApiTeams(WebApiTeam):
     """A class to represent a Web API team in Streamlit.
@@ -75,11 +95,13 @@ class SlIdentityRef(IdentityRef):
         """
         Display the IdentityRef details in a Streamlit app with a clean and elegant layout.
         """
-        st.markdown(f"### Identity ID: {self.id}")
-        st.markdown(f"**Name:** {self.displayName}")
-        st.markdown(f"**URL:** [Link to Identity]({self.url})")
-        st.markdown("---")
-
+        cols = st.columns([1, 4, 1])  # Adjust column proportions as needed
+        with cols[0]:
+            if self.imageUrl:
+                st.image(self.imageUrl, use_container_width=True)
+        with cols[1]:
+            st.markdown(f"{self.displayName} {self.uniqueName or 'Not Available'}")
+            
 class SlWorkItem(WorkItem):
     """A class to represent a work item in Streamlit.
 
@@ -138,3 +160,50 @@ class SlWorkItemQueryResult(WorkItemQueryResult):
 
 
         st.dataframe(filter_dataframe(df))
+
+class SlProjectCollection():
+    def __init__(self, projects):
+        if all(isinstance(project, dict) for project in projects):
+            self.projects = [SlProject(**project) for project in projects]
+        elif all(isinstance(project, SlProject) for project in projects):
+            self.projects = projects
+        else:
+            raise ValueError("Projects must be a list of dictionaries or a list of SlProject instances.")
+
+    def display_in_streamlit(self, selection = False):
+        """
+        Display the list of projects in a Streamlit app with a clean and elegant layout.
+        """
+        st.markdown("### Lista de Projetos")
+
+        # Display projects in a responsive grid layout
+        cols = st.columns(2)  # Adjust the number of columns as needed
+        for idx, project in enumerate(self.projects):
+            with cols[idx % len(cols)]:
+                project.display_in_streamlit(selection)
+
+class SlTeam():
+    def __init__(self, identities):
+        if all(isinstance(identity, SlIdentityRef) for identity in identities):
+            self.identities = identities
+        elif all(isinstance(identity, dict) for identity in identities):
+            self.identities = [
+                SlIdentityRef.from_json(identity["identity"])
+                if "identity" in identity
+                else SlIdentityRef.from_json(identity)
+                for identity in identities
+            ]
+        else:
+            raise ValueError("Identities must be a list of dictionaries or a list of SlIdentityRef instances.")
+
+    def display_in_streamlit(self):
+        """
+        Display the list of identities in a Streamlit app with a clean and elegant layout.
+        """
+        st.markdown("### Team Members")
+
+        # Display identities in a responsive grid layout
+        cols = st.columns(2)  # Adjust the number of columns as needed
+        for idx, identity in enumerate(self.identities):
+            with cols[idx % len(cols)]:
+                identity.display_in_streamlit()

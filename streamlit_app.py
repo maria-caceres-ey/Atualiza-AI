@@ -27,6 +27,50 @@ def start_streamlit():
         logging.error(f"Error starting Streamlit app: {e}")
 
 
+### WORKING EXAMPLES
+def example_display_tasks():
+    project_id = "e4005fd0-7b95-4391-8486-c4b21c935b2e"
+    url = f"http://localhost:8000/devops/projects/{project_id}/daily_tasks"
+
+    try:
+        response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        response.raise_for_status()
+        daily_tasks = response.json()
+
+        result = SlWorkItemQueryResult.from_json_list(daily_tasks)
+        result.display_in_streamlit()
+
+        
+    except requests.exceptions.RequestException as e:
+        st.error(f"Erro ao obter dados: {e}")
+
+def example_display_projects_selection():
+    url = f"http://localhost:8000/devops/projects/"
+    try:
+        response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        response.raise_for_status()
+        projects = response.json()
+
+        result = SlProjectCollection(projects)
+        result.display_in_streamlit(True)
+        
+    except requests.exceptions.RequestException as e:
+        st.error(f"Erro ao obter dados: {e}")
+
+def example_display_team_members():
+    project_id = "e4005fd0-7b95-4391-8486-c4b21c935b2e"
+    team_id = "9083e8b0-af44-4f90-9bdd-f54f9bb431f2"
+    url = f"http://localhost:8000/devops/projects/{project_id}/members/{team_id}"
+    try:
+        response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
+        response.raise_for_status()
+        team_members = response.json()
+
+        result = SlTeam(team_members.get("value"))
+        result.display_in_streamlit()
+        
+    except requests.exceptions.RequestException as e:
+        st.error(f"Erro ao obter dados: {e}")
 
 if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -52,23 +96,7 @@ if __name__ == "__main__":
     st.write("<h3>Bem-vindo ao Atualiza AI! Escolha um projeto que deseja obter mais informações e acompanhar o andamento.</h3>", unsafe_allow_html=True)
     st.write("")
 
-    #streamlit run app\streamlit\app.py
-    project_id = "e4005fd0-7b95-4391-8486-c4b21c935b2e"
-    url = f"http://localhost:8000/devops/projects/{project_id}/daily_tasks"
-
-    try:
-        response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
-        response.raise_for_status()
-        daily_tasks = response.json()
-
-        result = SlWorkItemQueryResult.from_json_list(daily_tasks)
-        result.display_in_streamlit()
-
-        if daily_tasks:
-            st.write("### Tarefas Diárias")
-            st.json(daily_tasks)  # Exibe a lista de JSON como está
-        else:
-            st.write("Nenhuma tarefa diária encontrada.")
-
-    except requests.exceptions.RequestException as e:
-        st.error(f"Erro ao obter dados: {e}")
+    # EXEMPLOS
+    example_display_tasks()
+    example_display_team_members()
+    example_display_projects_selection()
