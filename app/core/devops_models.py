@@ -16,6 +16,7 @@ from datetime import datetime
 
 
 
+
 class Project(BaseModel):
     abbreviation: Optional[str]
     defaultTeamImageUrl: Optional[str]
@@ -41,7 +42,7 @@ class Project(BaseModel):
     def from_json(cls, json_data):
         lastUpdateTime = json_data.get("lastUpdateTime")
         try:
-            lastUpdateTime = datetime.strptime(lastUpdateTime, "%Y-%m-%dT%H:%M:%SZ")
+            lastUpdateTime = datetime.strptime(lastUpdateTime, "%Y-%m-%dT%H:%M:%S.%fZ") if '.' in lastUpdateTime else datetime.strptime(lastUpdateTime, "%Y-%m-%dT%H:%M:%SZ")
         except ValueError:
             lastUpdateTime = None
         else:
@@ -60,6 +61,27 @@ class Project(BaseModel):
             visibility=json_data.get("visibility"),
             web=json_data.get("web"),
         )
+    
+    @classmethod
+    def project_from_workitem(cls, json_data):
+        fields = json_data.get("fields", {})
+        return cls(
+            abbreviation=json_data.get("abbreviation"),
+            defaultTeamImageUrl=json_data.get("defaultTeamImageUrl"),
+
+            id=str(json_data.get("id")) if json_data.get("id") else None,
+            name=fields.get("System.Title"),
+            description=fields.get("System.Description"),
+            lastUpdateTime=datetime.strptime(fields.get("System.ChangedDate"), "%Y-%m-%dT%H:%M:%S.%fZ") if fields.get("System.ChangedDate") and '.' in fields.get("System.ChangedDate") else datetime.strptime(fields.get("System.ChangedDate"), "%Y-%m-%dT%H:%M:%SZ") if fields.get("System.ChangedDate") else None,
+            state=fields.get("System.State"),
+            revision=json_data.get("rev"),
+            url=json_data.get("url"),
+
+            visibility=json_data.get("visibility"),
+            web=json_data.get("web"),
+        )
+    
+    
         
 class WebApiTeam(BaseModel):
     '''
@@ -195,21 +217,59 @@ class TeamMember(BaseModel):
 
 class WorkItem(BaseModel):
     _links: Optional[Any]
-    commentVersionRef: Optional[Any]
-    fields: Optional[Dict[str, Any]]
+
+    title: Optional[str] = None
     id: Optional[int]
+    state: Optional[str] = None
+    assignedTo: Optional[IdentityRef] = None
+    target_date: Optional[datetime] = None
+    lastUpdateTime: Optional[datetime] = None
+    fields: Optional[Dict[str, Any]]
+    description: Optional[str] = None
+
+    commentVersionRef: Optional[Any]
     relations: Optional[List[Any]]
     rev: Optional[int]
     url: Optional[str]
     organization: Optional[str] = None
     project: Optional[str] = None
     completedHours: Optional[float] = None
-    title: Optional[str] = None
-    state: Optional[str] = None
-    assignedTo: Optional[IdentityRef] = None
-    target_date: Optional[datetime] = None
 
     
+    def to_project(self) -> Project:
+        '''
+        Project | Json | Wit
+        Xabbreviation: Optional[str] | NO 
+        XdefaultTeamImageUrl: Optional[str] | NO 
+        =description: Optional[str] | System.Description | description
+        id: Optional[str] | id | id
+        =lastUpdateTime: Optional[datetime] | System.ChangedDate | lastUpdateTime
+        =name: Optional[str] | System.Title | title
+        revision: Optional[int] | rev | rev
+        state: Optional[str] | System.State | state
+        url: Optional[str]
+        web: Optional[str]
+        visibility: Optional[str]
+        '''
+        return Project(
+            id=str(self.id) if self.id else None,
+            name=self.title,
+            description=self.description,
+            lastUpdateTime=self.lastUpdateTime,
+            state=self.state,
+            revision=self.rev,
+            url=self.url,
+        )
+
+    @classmethod
+    def getFieldsForEpicProject(self):
+        return ["System.Title",
+                "System.Description",
+                "System.ChangedDate",
+                "System.State",
+                "Microsoft.VSTS.Scheduling.TargetDate"]
+    
+
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -225,7 +285,7 @@ class WorkItem(BaseModel):
         target_date_str = fields.get("Microsoft.VSTS.Scheduling.TargetDate", None)
         if target_date_str:
             try:
-                self.target_date = datetime.strptime(target_date_str, "%Y-%m-%dT%H:%M:%SZ")
+                self.target_date = datetime.strptime(target_date_str, "%Y-%m-%dT%H:%M:%S.%fZ") if '.' in target_date_str else datetime.strptime(target_date_str, "%Y-%m-%dT%H:%M:%SZ")
             except ValueError:
                 self.target_date = None
         else:
@@ -252,6 +312,8 @@ class WorkItem(BaseModel):
             rev=json_data.get("rev"),
             url=json_data.get("url"),
         )
+
+
 
 #st.dataframe(filter_dataframe(df))
 class WorkItemQueryResult(BaseModel):

@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timedelta
 from app.core.devops_models import *
 
+
 AZURE_DEVOPS_URL = os.getenv("AZURE_DEVOPS_URL")
 AZURE_DEVOPS_TOKEN = os.getenv("AZURE_DEVOPS_TOKEN")
 
@@ -18,7 +19,9 @@ def get_headers():
     }
 
 
-def get_projects():
+async def get_projects(project_id = "e4005fd0-7b95-4391-8486-c4b21c935b2e"):
+    '''
+    #OLD
     url = f"{AZURE_DEVOPS_URL}/_apis/projects?api-version=7.1" #OK
     response = requests.get(url, headers=get_headers())
 
@@ -29,6 +32,57 @@ def get_projects():
         ]
         return projects
     return {"error": "Falha ao obter dados do Azure DevOps"}
+    '''
+    #NEW
+    projects = []
+
+    url = f"{AZURE_DEVOPS_URL}/{project_id}/_apis/wit/wiql?api-version=7.1"
+    query = {
+        "query": f"""SELECT
+            [System.Id],
+            [System.rev],
+            [System.ChangedDate],
+            [System.State],
+            [Microsoft.VSTS.Scheduling.TargetDate]
+        FROM workitems
+        WHERE
+            [System.TeamProject] = 'Generative AI'
+            AND [System.WorkItemType] = 'Epic'
+        ORDER BY [System.Id] asc
+        """
+    }
+
+    try:
+        
+        response = requests.post(url, headers=get_headers(), json=query)
+        response.raise_for_status()  
+        
+        data = response.json()
+
+        work_item_ids = [item["id"] for item in data.get("workItems", [])]
+        print(f"IDs dos Work Items: {work_item_ids}" if len(work_item_ids)<10 else f"IDs dos Work Items: {len(work_item_ids)} itens")#Tranquilo
+        
+        fields =  ["System.Title",
+                "System.Description",
+                "System.ChangedDate",
+                "System.State",
+                "Microsoft.VSTS.Scheduling.TargetDate"]
+
+        
+        work_items_data = await get_workitems_in_batches(project_id, work_item_ids, fields)
+        
+
+        projects = [
+            Project.project_from_workitem(p) for p in work_items_data
+        ]
+        
+
+        return projects
+
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao consultar a API: {e}")#Tranquilo
+
+    return projects
 
 def select_project(project_id:str):
     url = f"{AZURE_DEVOPS_URL}/_apis/projects/{project_id}?api-version=7.1" #OK
@@ -77,7 +131,11 @@ async def get_workitems_batch(project_id:str, workitem_ids:List[int], fields:Lis
 
 async def get_workitems_in_batches(project_id: str, workitem_ids: List[int], fields: List[str] = None):
     if not fields:
-        fields = ["System.Title", "System.State", "System.AssignedTo", "Microsoft.VSTS.Scheduling.CompletedWork", "Microsoft.VSTS.Scheduling.TargetDate"]
+        fields = ["System.Title",
+                  "System.State",
+                  "System.AssignedTo",
+                  "Microsoft.VSTS.Scheduling.CompletedWork",
+                  "Microsoft.VSTS.Scheduling.TargetDate"]
     
     batch_size = 200
     all_workitems = []
