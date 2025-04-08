@@ -37,14 +37,49 @@ class SlProject(Project):
 
             # Exibir informações do projeto de forma formatada
             st.write(f"**ID:** {self.id}")
-            st.write(f"**Descrição:** {self.description or 'Não disponível'}")
+            # Mostrar a descrição do projeto, interpretando o HTML
+            if self.description:
+                st.markdown("<b>Descrição:</b>", unsafe_allow_html=True)
+                max_length = 300  # Número máximo de caracteres a mostrar inicialmente
+                if len(self.description) > max_length:
+                    k=0
+                    words = self.description.split()
+                    short_description = ""
+                    for word in words:
+                        k += 1
+                        if len(short_description) + len(word) + 1 > max_length:
+                            break
+                        short_description += word + " "
+                    short_description = short_description.strip() + "..."
+                    
+                    # Mostrar descripción completa o breve según el estado
+                    if f"show_full_description_{self.id}" not in st.session_state:
+                        st.session_state[f"show_full_description_{self.id}"] = False
+
+                    if st.session_state[f"show_full_description_{self.id}"]:
+                        st.markdown(self.description, unsafe_allow_html=True)
+                        if st.button("Leer menos", key=f"read_less_{self.id}"):
+                            st.session_state[f"show_full_description_{self.id}"] = False
+                    else:
+                        st.markdown(short_description, unsafe_allow_html=True)
+                        if st.button("Leer mais", key=f"read_more_{self.id}"):
+                            st.session_state[f"show_full_description_{self.id}"] = True
+
+                else:
+                    st.markdown(self.description, unsafe_allow_html=True)
+            else:
+                st.write("**Descrição:** Não disponível")
+
+            
+
+
             st.write(f"**Estado:** {self.state or 'Não disponível'}")
             if self.lastUpdateTime:
                 formatted_date_time = pd.to_datetime(self.lastUpdateTime).strftime("%d/%m/%Y %H:%M:%S")
                 st.write(f"**Última Atualização:** {formatted_date_time}")
             else:
                 st.write(f"**Última Atualização:** Não disponível")
-            st.write(f"**Visibilidade:** {self.visibility or 'Não disponível'}")
+            #st.write(f"**Visibilidade:** {self.visibility or 'Não disponível'}")
             #st.write(f"**Abreviatura:** {self.abbreviation or 'Não disponível'}")
             #st.write(f"**URL do Projeto:** [Link]({self.url})" if self.url else "URL não disponível")
             #st.write(f"**Website:** [Link]({self.web})" if self.web else "Website não disponível")
@@ -176,11 +211,36 @@ class SlProjectCollection():
         """
         st.markdown("### Lista de Projetos")
 
-        # Display projects in a responsive grid layout
-        cols = st.columns(2)  # Adjust the number of columns as needed
-        for idx, project in enumerate(self.projects):
-            with cols[idx % len(cols)]:
-                project.display_in_streamlit(selection)
+        # Add tabs for different views
+        tab1, tab2 = st.tabs(["Card view", "Table view"])
+
+        with tab1:
+            # Add a search bar for filtering projects
+            search_query = st.text_input("Buscar projectos", "")
+            filtered_projects = [
+                project for project in self.projects
+                if search_query.lower() in (project.name or "").lower()
+            ]
+
+            # Display filtered projects in a responsive grid layout
+            cols = st.columns(2)  # Adjust the number of columns as needed
+            for idx, project in enumerate(filtered_projects):
+                with cols[idx % len(cols)]:
+                    project.display_in_streamlit(selection)
+
+        with tab2:
+            # Convert projects to a DataFrame for table view
+            project_data = [
+                {
+                    "ID": project.id,
+                    "Name": project.name,
+                    "Status": project.state,
+                    "LastUpdate": project.lastUpdateTime,
+                }
+                for project in self.projects
+            ]
+            df = pd.DataFrame(project_data)
+            st.dataframe(filter_dataframe(df))
 
 class SlTeam():
     def __init__(self, identities):

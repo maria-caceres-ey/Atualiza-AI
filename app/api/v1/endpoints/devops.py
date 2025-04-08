@@ -33,10 +33,11 @@ router = APIRouter()
 """
 
 
+
 @router.get("/projects", response_model=List[Project])
 async def list_projects():
    #{AZURE_DEVOPS_URL}/_apis/projects?api-version=7.1
-   projects = get_projects()
+   projects = await get_projects()
    if "error" in projects:
        raise HTTPException(status_code=500, detail=projects["error"])
    return projects
