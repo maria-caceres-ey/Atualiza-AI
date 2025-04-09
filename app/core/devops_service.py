@@ -3,7 +3,7 @@ import requests
 import os
 from datetime import datetime, timedelta
 from app.core.devops_models import *
-
+from app.core.project_model import Project
 
 AZURE_DEVOPS_URL = os.getenv("AZURE_DEVOPS_URL")
 AZURE_DEVOPS_TOKEN = os.getenv("AZURE_DEVOPS_TOKEN")
@@ -321,3 +321,22 @@ async def get_project_info(project_id:str, repository_id:str):
         "daily_tasks": daily_tasks,
         "team_info": team_info
     }
+
+#in an ideal world we saved the project
+
+global actual_project
+actual_project = None
+#New for epic Project
+async def epic_get_tasks(project_id:str, azure_project_id="e4005fd0-7b95-4391-8486-c4b21c935b2e"):
+    global actual_project
+    if not actual_project:
+        actual_project = Project()
+        actual_project.id=project_id
+        return actual_project.getTasks(headers=get_headers(), azure_path=AZURE_DEVOPS_URL, azure_project_id=azure_project_id)
+    
+async def epic_get_team_members(project_id:str, azure_project_id="e4005fd0-7b95-4391-8486-c4b21c935b2e"):
+    global actual_project
+    if not actual_project:
+        actual_project = Project()
+        actual_project.id=project_id
+        return actual_project.getTeamMembers(headers=get_headers(), azure_path=AZURE_DEVOPS_URL, azure_project_id=azure_project_id)

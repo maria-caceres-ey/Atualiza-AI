@@ -14,6 +14,7 @@ from app.core.devops_service import (
    get_user_daily_tasks
 )
 from app.core.devops_models import *
+from app.core.project_model import Project
 
 router = APIRouter()
 

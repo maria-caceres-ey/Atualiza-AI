@@ -1,3 +1,4 @@
+#devops_model
 #app/core/devops_models.py
 import requests
 import pprint
@@ -14,112 +15,6 @@ from pydantic import BaseModel, Field
 from typing import Optional, Any, Dict, List
 from datetime import datetime
 
-
-
-
-class Project(BaseModel):
-    abbreviation: Optional[str]
-    defaultTeamImageUrl: Optional[str]
-    description: Optional[str]
-    id: Optional[str]
-    lastUpdateTime: Optional[datetime]
-    name: Optional[str]
-    revision: Optional[int]
-    state: Optional[str]
-    url: Optional[str]
-    web: Optional[str]
-    visibility: Optional[str]
-
-    def __repr__(self):
-        return (
-            f"Project(abbreviation={self.abbreviation}, defaultTeamImageUrl={self.defaultTeamImageUrl}, "
-            f"description={self.description}, id={self.id}, lastUpdateTime={self.lastUpdateTime}, "
-            f"name={self.name}, revision={self.revision}, state={self.state}, url={self.url}, "
-            f"visibility={self.visibility})"
-        )
-
-    @classmethod
-    def from_json(cls, json_data):
-        lastUpdateTime = json_data.get("lastUpdateTime")
-        try:
-            lastUpdateTime = datetime.strptime(lastUpdateTime, "%Y-%m-%dT%H:%M:%S.%fZ") if '.' in lastUpdateTime else datetime.strptime(lastUpdateTime, "%Y-%m-%dT%H:%M:%SZ")
-        except ValueError:
-            lastUpdateTime = None
-        else:
-            lastUpdateTime = None
-
-        return cls(
-            abbreviation=json_data.get("abbreviation"),
-            defaultTeamImageUrl=json_data.get("defaultTeamImageUrl"),
-            description=json_data.get("description"),
-            id=json_data.get("id"),
-            lastUpdateTime=json_data.get("lastUpdateTime"),
-            name=json_data.get("name"),
-            revision=json_data.get("revision"),
-            state=json_data.get("state"),
-            url=json_data.get("url"),
-            visibility=json_data.get("visibility"),
-            web=json_data.get("web"),
-        )
-    
-    @classmethod
-    def project_from_workitem(cls, json_data):
-        fields = json_data.get("fields", {})
-        return cls(
-            abbreviation=json_data.get("abbreviation"),
-            defaultTeamImageUrl=json_data.get("defaultTeamImageUrl"),
-
-            id=str(json_data.get("id")) if json_data.get("id") else None,
-            name=fields.get("System.Title"),
-            description=fields.get("System.Description"),
-            lastUpdateTime=datetime.strptime(fields.get("System.ChangedDate"), "%Y-%m-%dT%H:%M:%S.%fZ") if fields.get("System.ChangedDate") and '.' in fields.get("System.ChangedDate") else datetime.strptime(fields.get("System.ChangedDate"), "%Y-%m-%dT%H:%M:%SZ") if fields.get("System.ChangedDate") else None,
-            state=fields.get("System.State"),
-            revision=json_data.get("rev"),
-            url=json_data.get("url"),
-
-            visibility=json_data.get("visibility"),
-            web=json_data.get("web"),
-        )
-    
-    
-        
-class WebApiTeam(BaseModel):
-    '''
-    ALL TEAMS 
-    GET https://dev.azure.com/{organization}/_apis/teams?api-version=7.2-preview.3
-    MY TEAMS
-    GET https://dev.azure.com/{organization}/_apis/teams?api-version=7.2-preview.3
-
-    '''
-    description: Optional[str]
-    id: Optional[str]
-    identity: Optional[Any]
-    identityUrl: Optional[str]
-    name: Optional[str]
-    projectId: Optional[str]
-    projectName: Optional[str]
-    url: Optional[str]
-
-    def __repr__(self):
-        return (
-            f"WebApiTeam(description={self.description}, id={self.id}, identity={self.identity}, "
-            f"identityUrl={self.identityUrl}, name={self.name}, projectId={self.projectId}, "
-            f"projectName={self.projectName}, url={self.url})"
-        )
-
-    @classmethod
-    def from_json(cls, json_data):
-        return cls(
-            description=json_data.get("description"),
-            id=json_data.get("id"),
-            identity=json_data.get("identity"),
-            identityUrl=json_data.get("identityUrl"),
-            name=json_data.get("name"),
-            projectId=json_data.get("projectId"),
-            projectName=json_data.get("projectName"),
-            url=json_data.get("url"),
-        )
-    
 #Team member
 class IdentityRef(BaseModel):
     _links: Optional[Any]
@@ -185,36 +80,6 @@ class IdentityRef(BaseModel):
             url=json_data.get("url", ""),
         )
 
-class TeamMember(BaseModel):
-    identity: Optional[IdentityRef]
-    isTeamAdmin: Optional[bool]
-
-    def to_dict(self):
-        return {
-            "isTeamAdmin": self.isTeamAdmin == True,
-            "id": self.identity.id if self.identity else None,
-            "displayName": self.identity.displayName if self.identity else None,
-            "imageUrl": self.identity.imageUrl if self.identity else None,
-        }
-
-    def __repr__(self):
-        return f"TeamMember(identity={self.identity}, isTeamAdmin={self.isTeamAdmin})"
-
-    @classmethod
-    def from_json(cls, json_data):
-        return cls(
-            identity=IdentityRef.from_json(json_data.get("identity")),
-            isTeamAdmin=json_data.get("isTeamAdmin"),
-        )
-    
-    def to_dict(self):
-        return {
-            "isTeamAdmin": self.isTeamAdmin == True,
-            "id": self.identity.id,
-            "displayName": self.identity.displayName,
-            "imageUrl": self.identity.imageUrl,
-        }
-
 class WorkItem(BaseModel):
     _links: Optional[Any]
 
@@ -235,31 +100,8 @@ class WorkItem(BaseModel):
     project: Optional[str] = None
     completedHours: Optional[float] = None
 
-    
-    def to_project(self) -> Project:
-        '''
-        Project | Json | Wit
-        Xabbreviation: Optional[str] | NO 
-        XdefaultTeamImageUrl: Optional[str] | NO 
-        =description: Optional[str] | System.Description | description
-        id: Optional[str] | id | id
-        =lastUpdateTime: Optional[datetime] | System.ChangedDate | lastUpdateTime
-        =name: Optional[str] | System.Title | title
-        revision: Optional[int] | rev | rev
-        state: Optional[str] | System.State | state
-        url: Optional[str]
-        web: Optional[str]
-        visibility: Optional[str]
-        '''
-        return Project(
-            id=str(self.id) if self.id else None,
-            name=self.title,
-            description=self.description,
-            lastUpdateTime=self.lastUpdateTime,
-            state=self.state,
-            revision=self.rev,
-            url=self.url,
-        )
+    childs = Optional[List["WorkItem"]] = None
+    parentId = Optional[int] = None
 
     @classmethod
     def getFieldsForEpicProject(self):
@@ -269,7 +111,29 @@ class WorkItem(BaseModel):
                 "System.State",
                 "Microsoft.VSTS.Scheduling.TargetDate"]
     
+    def getInfo(self, levels:int, headers, azure_path="https://dev.azure.com/FSO-DnA-Devops", azure_project_id="e4005fd0-7b95-4391-8486-c4b21c935b2e"):
+        #The only thing that needs is id to query all
+        base_url = f"{azure_path}/{azure_project_id}/_apis/wit/workItems/{self.id}?api-version=7.2-preview.1"
+        if levels>0: base_url += f"&$expand=relations"
 
+        response = requests.get(base_url, headers=headers)
+        response.raise_for_status()  # Raise an error for bad responses
+
+        if response.status_code == 200:
+            data = response.json()
+            if not self.title:
+                self.parseFields(data.get("fields", {}))
+            if data.get("relations"):
+                for relation in data["relations"]:
+                    if relation.get("rel") == "System.LinkTypes.Hierarchy-Forward":
+                        child_id = relation["url"].split("/")[-1]
+                        child_work_item = WorkItem(id=child_id, organization=self.organization, project=self.project)
+                        child_work_item.getInfo(levels-1, headers, azure_path, azure_project_id)
+                        self.childs.append(child_work_item)
+
+                    elif relation.get("rel") == "System.LinkTypes.Hierarchy-Reverse":
+                        parent_id = relation["url"].split("/")[-1]
+                        self.parentId = parent_id
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -312,6 +176,79 @@ class WorkItem(BaseModel):
             rev=json_data.get("rev"),
             url=json_data.get("url"),
         )
+    
+
+        
+class WebApiTeam(BaseModel):
+    '''
+    ALL TEAMS 
+    GET https://dev.azure.com/{organization}/_apis/teams?api-version=7.2-preview.3
+    MY TEAMS
+    GET https://dev.azure.com/{organization}/_apis/teams?api-version=7.2-preview.3
+
+    '''
+    description: Optional[str]
+    id: Optional[str]
+    identity: Optional[Any]
+    identityUrl: Optional[str]
+    name: Optional[str]
+    projectId: Optional[str]
+    projectName: Optional[str]
+    url: Optional[str]
+
+    def __repr__(self):
+        return (
+            f"WebApiTeam(description={self.description}, id={self.id}, identity={self.identity}, "
+            f"identityUrl={self.identityUrl}, name={self.name}, projectId={self.projectId}, "
+            f"projectName={self.projectName}, url={self.url})"
+        )
+
+    @classmethod
+    def from_json(cls, json_data):
+        return cls(
+            description=json_data.get("description"),
+            id=json_data.get("id"),
+            identity=json_data.get("identity"),
+            identityUrl=json_data.get("identityUrl"),
+            name=json_data.get("name"),
+            projectId=json_data.get("projectId"),
+            projectName=json_data.get("projectName"),
+            url=json_data.get("url"),
+        )
+    
+
+
+class TeamMember(BaseModel):
+    identity: Optional[IdentityRef]
+    isTeamAdmin: Optional[bool]
+
+    def to_dict(self):
+        return {
+            "isTeamAdmin": self.isTeamAdmin == True,
+            "id": self.identity.id if self.identity else None,
+            "displayName": self.identity.displayName if self.identity else None,
+            "imageUrl": self.identity.imageUrl if self.identity else None,
+        }
+
+    def __repr__(self):
+        return f"TeamMember(identity={self.identity}, isTeamAdmin={self.isTeamAdmin})"
+
+    @classmethod
+    def from_json(cls, json_data):
+        return cls(
+            identity=IdentityRef.from_json(json_data.get("identity")),
+            isTeamAdmin=json_data.get("isTeamAdmin"),
+        )
+    
+    def to_dict(self):
+        return {
+            "isTeamAdmin": self.isTeamAdmin == True,
+            "id": self.identity.id,
+            "displayName": self.identity.displayName,
+            "imageUrl": self.identity.imageUrl,
+        }
+
+
 
 
 
@@ -343,7 +280,6 @@ class WorkItemQueryResult(BaseModel):
         if column_order:
             df = df[[col for col in column_order if col in df.columns]]
         return df
-    
     
     @classmethod
     def from_json_list(cls, json_list):
