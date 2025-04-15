@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from app.core.devops_models import *
 from app.core.project_model import Project
 
+
 AZURE_DEVOPS_URL = os.getenv("AZURE_DEVOPS_URL")
 AZURE_DEVOPS_TOKEN = os.getenv("AZURE_DEVOPS_TOKEN")
 

@@ -150,6 +150,7 @@ class WorkItem(BaseModel):
         if target_date_str:
             try:
                 self.target_date = datetime.strptime(target_date_str, "%Y-%m-%dT%H:%M:%S.%fZ") if '.' in target_date_str else datetime.strptime(target_date_str, "%Y-%m-%dT%H:%M:%SZ")
+                self.target_date = datetime.strptime(target_date_str, "%Y-%m-%dT%H:%M:%S.%fZ") if '.' in target_date_str else datetime.strptime(target_date_str, "%Y-%m-%dT%H:%M:%SZ")
             except ValueError:
                 self.target_date = None
         else:
