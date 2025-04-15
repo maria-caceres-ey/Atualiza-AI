@@ -100,8 +100,8 @@ class WorkItem(BaseModel):
     project: Optional[str] = None
     completedHours: Optional[float] = None
 
-    childs = Optional[List["WorkItem"]] = None
-    parentId = Optional[int] = None
+    childs: Optional[List[Any]] = Field(default_factory=list)
+    parentId: Optional[int] = None
 
     @classmethod
     def getFieldsForEpicProject(self):
@@ -248,9 +248,6 @@ class TeamMember(BaseModel):
             "displayName": self.identity.displayName,
             "imageUrl": self.identity.imageUrl,
         }
-
-
-
 
 
 #st.dataframe(filter_dataframe(df))

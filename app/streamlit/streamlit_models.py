@@ -1,5 +1,6 @@
 
 from app.core.devops_models import *
+from app.core.project_model import Project, EpicProject
 import pandas as pd
 from pandas.api.types import (
     is_categorical_dtype,
@@ -12,15 +13,13 @@ from app.core.utils import filter_dataframe
 #For the interface
 import streamlit as st
 
-class SlProject(Project):
-    """A class to represent a project in Streamlit.
-
-    Args:
-        Project (Project): The base class for projects.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class SlProject():
+    def __init__(self, project, project_class=Project):
+        if not issubclass(project_class, (Project, EpicProject)):
+            raise ValueError("The project must be an instance of Project or EpicProject.")
+        
+        self.project_class=project_class
+        self.project = project_class(**project)#Just in this class to make it compatible with all kind of projects
 
     def __str__(self):
         return f"SlProject({self.__dict__})"
@@ -29,21 +28,21 @@ class SlProject(Project):
         with st.container(border=True):
 
             # Título do projeto
-            st.subheader(self.name or "Nome do Projeto Desconhecido")
+            st.subheader(self.project.name or "Nome do Projeto Desconhecido")
 
             # Mostrar a imagem da equipe, se disponível
-            if self.defaultTeamImageUrl:
-                st.image(self.defaultTeamImageUrl, caption="Imagem da Equipe", use_container_width =True)
+            if self.project.defaultTeamImageUrl:
+                st.image(self.project.defaultTeamImageUrl, caption="Imagem da Equipe", use_container_width =True)
 
             # Exibir informações do projeto de forma formatada
-            st.write(f"**ID:** {self.id}")
+            st.write(f"**ID:** {self.project.id}")
             # Mostrar a descrição do projeto, interpretando o HTML
-            if self.description:
+            if self.project.description:
                 st.markdown("<b>Descrição:</b>", unsafe_allow_html=True)
                 max_length = 300  # Número máximo de caracteres a mostrar inicialmente
-                if len(self.description) > max_length:
+                if len(self.project.description) > max_length:
                     k=0
-                    words = self.description.split()
+                    words = self.project.description.split()
                     short_description = ""
                     for word in words:
                         k += 1
@@ -53,43 +52,40 @@ class SlProject(Project):
                     short_description = short_description.strip() + "..."
                     
                     # Mostrar descripción completa o breve según el estado
-                    if f"show_full_description_{self.id}" not in st.session_state:
-                        st.session_state[f"show_full_description_{self.id}"] = False
+                    if f"show_full_description_{self.project.id}" not in st.session_state:
+                        st.session_state[f"show_full_description_{self.project.id}"] = False
 
-                    if st.session_state[f"show_full_description_{self.id}"]:
-                        st.markdown(self.description, unsafe_allow_html=True)
-                        if st.button("Leer menos", key=f"read_less_{self.id}"):
-                            st.session_state[f"show_full_description_{self.id}"] = False
+                    if st.session_state[f"show_full_description_{self.project.id}"]:
+                        st.markdown(self.project.description, unsafe_allow_html=True)
+                        if st.button("Leer menos", key=f"read_less_{self.project.id}"):
+                            st.session_state[f"show_full_description_{self.project.id}"] = False
                     else:
                         st.markdown(short_description, unsafe_allow_html=True)
-                        if st.button("Leer mais", key=f"read_more_{self.id}"):
-                            st.session_state[f"show_full_description_{self.id}"] = True
+                        if st.button("Leer mais", key=f"read_more_{self.project.id}"):
+                            st.session_state[f"show_full_description_{self.project.id}"] = True
 
                 else:
-                    st.markdown(self.description, unsafe_allow_html=True)
+                    st.markdown(self.project.description, unsafe_allow_html=True)
             else:
                 st.write("**Descrição:** Não disponível")
 
-            
 
-
-            st.write(f"**Estado:** {self.state or 'Não disponível'}")
-            if self.lastUpdateTime:
-                formatted_date_time = pd.to_datetime(self.lastUpdateTime).strftime("%d/%m/%Y %H:%M:%S")
+            st.write(f"**Estado:** {self.project.state or 'Não disponível'}")
+            if self.project.lastUpdateTime:
+                formatted_date_time = pd.to_datetime(self.project.lastUpdateTime).strftime("%d/%m/%Y %H:%M:%S")
                 st.write(f"**Última Atualização:** {formatted_date_time}")
             else:
                 st.write(f"**Última Atualização:** Não disponível")
-            #st.write(f"**Visibilidade:** {self.visibility or 'Não disponível'}")
-            #st.write(f"**Abreviatura:** {self.abbreviation or 'Não disponível'}")
-            #st.write(f"**URL do Projeto:** [Link]({self.url})" if self.url else "URL não disponível")
-            #st.write(f"**Website:** [Link]({self.web})" if self.web else "Website não disponível")
+            #st.write(f"**Visibilidade:** {self.project.visibility or 'Não disponível'}")
+            #st.write(f"**Abreviatura:** {self.project.abbreviation or 'Não disponível'}")
+            #st.write(f"**URL do Projeto:** [Link]({self.project.url})" if self.project.url else "URL não disponível")
+            #st.write(f"**Website:** [Link]({self.project.web})" if self.project.web else "Website não disponível")
 
             if selection:
-                if st.button("Selecionar Projeto", key=self.id):
-                    st.session_state.selected_project = self
-                    st.session_state.selected_project_id = self.id
-                    st.success(f"Você escolheu o projeto: {self.name}.")
-
+                if st.button("Selecionar Projeto", key=self.project.id):
+                    st.session_state.selected_project = self.project
+                    st.session_state.selected_project_id = self.project.id
+                    st.success(f"Você escolheu o projeto: {self.project.name}.")
 
 class SlWebApiTeams(WebApiTeam):
     """A class to represent a Web API team in Streamlit.
@@ -196,16 +192,25 @@ class SlWorkItemQueryResult(WorkItemQueryResult):
 
         st.dataframe(filter_dataframe(df))
 
-class SlProjectCollection():
-    def __init__(self, projects):
+class SlProjectCollection:
+    def __init__(self, projects, project_class):
+        """
+        Initializes the SlProjectCollection with a list of projects.
+
+        :param projects: List of projects (either dictionaries or SlProject instances).
+        :param project_class: The class to use for creating project instances (Project or EpicProject).
+        """
+        if not issubclass(project_class, (Project, EpicProject)):
+            raise ValueError("project_class must be a subclass of Project or EpicProject.")
+
         if all(isinstance(project, dict) for project in projects):
-            self.projects = [SlProject(**project) for project in projects]
+            self.projects = [SlProject(project, project_class) for project in projects]
         elif all(isinstance(project, SlProject) for project in projects):
             self.projects = projects
         else:
-            raise ValueError("Projects must be a list of dictionaries or a list of SlProject instances.")
+            raise ValueError("Projects must be a list of dictionaries or a list of instances of the specified project class.")
 
-    def display_in_streamlit(self, selection = False):
+    def display_in_streamlit(self, selection=False):
         """
         Display the list of projects in a Streamlit app with a clean and elegant layout.
         """
@@ -219,7 +224,7 @@ class SlProjectCollection():
             search_query = st.text_input("Buscar projectos", "")
             filtered_projects = [
                 project for project in self.projects
-                if search_query.lower() in (project.name or "").lower()
+                if search_query.lower() in (project.project.name or "").lower()
             ]
 
             # Display filtered projects in a responsive grid layout
@@ -232,10 +237,10 @@ class SlProjectCollection():
             # Convert projects to a DataFrame for table view
             project_data = [
                 {
-                    "ID": project.id,
-                    "Name": project.name,
-                    "Status": project.state,
-                    "LastUpdate": project.lastUpdateTime,
+                    "ID": project.project.id,
+                    "Name": project.project.name,
+                    "Status": project.project.state,
+                    "LastUpdate": project.project.lastUpdateTime,
                 }
                 for project in self.projects
             ]

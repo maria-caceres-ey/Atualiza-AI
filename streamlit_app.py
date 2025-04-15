@@ -28,7 +28,7 @@ def start_streamlit():
 
 
 ### WORKING EXAMPLES
-def example_display_tasks():
+def example_display_tasks(epic_id):
     project_id = "e4005fd0-7b95-4391-8486-c4b21c935b2e"
     url = f"http://localhost:8000/devops/projects/{project_id}/daily_tasks"
 
@@ -45,13 +45,13 @@ def example_display_tasks():
         st.error(f"Erro ao obter dados: {e}")
 
 def example_display_projects_selection():
-    url = f"http://localhost:8000/devops/projects/"
+    url = f"http://localhost:8000/epic/projects/"
     try:
         response = requests.get(url, headers={"Authorization": f"Bearer {api_key}"})
         response.raise_for_status()
         projects = response.json()
 
-        result = SlProjectCollection(projects)
+        result = SlProjectCollection(projects, EpicProject)
         result.display_in_streamlit(True)
         
     except requests.exceptions.RequestException as e:
@@ -97,6 +97,15 @@ if __name__ == "__main__":
     st.write("")
 
     # EXEMPLOS
-    example_display_tasks()
-    example_display_team_members()
-    example_display_projects_selection()
+    #example_display_tasks()
+    #example_display_team_members()
+    
+
+    if st.session_state.selected_project_id:
+        st.write("<h3>Detalhes do Projeto Selecionado</h3>", unsafe_allow_html=True)
+        example_display_tasks(st.session_state.selected_project_id)
+
+    else:
+        example_display_projects_selection()
+
+#streamlit run streamlit_app.py

@@ -6,8 +6,8 @@ from typing import Optional, Any, Dict, List
 from datetime import datetime
 import pandas as pd
 
-from devops_models import WorkItem, IdentityRef
-
+from app.core.devops_models import WorkItem, IdentityRef
+    
 class Project(BaseModel):
     #Tambien es un WorkItem pero es un epic 
     abbreviation: Optional[str]
@@ -22,12 +22,6 @@ class Project(BaseModel):
     web: Optional[str]
     visibility: Optional[str]
 
-
-    root: Optional[WorkItem] = Field(default_factory=WorkItem)#Guarda el workitem raiz del proyecto
-    childs: Optional[List[WorkItem]] = Field(default_factory=list)#Guarda descendientes directos
-    tasks: Optional[List[WorkItem]] = Field(default_factory=list)#Guarda las tasks de los niveles mas bajos
-    teamMembers: Optional[Dict[str,IdentityRef]] = Field(default_factory=list)#Guarda los miembros del equipo
-    #descendientes: Optional[List[WorkItem]] = Field(default_factory=list)#Guarda todos los descendientes
 
     def __repr__(self):
         return (
@@ -61,12 +55,28 @@ class Project(BaseModel):
             web=json_data.get("web"),
         )
     
+#The projects in Azure DevOps are respresented as workitems of type Epic
+#This class tries to represent this particularity
+#also takes care of requests to the Azure DevOps API
+class EpicProject(Project):
+    # These additional attributes are not needed in the parent because this information can be obtained directly from the api
+    root: Optional[WorkItem] = Field(default_factory=WorkItem)#Saves the workitem root of the project
+    
+    # It heavely relies in python language and allocation of memory
+    # if needed in another programming language create the elements and referenciate them trough pointers
+    tasks: Optional[List[WorkItem]] = Field(default_factory=list)#All tasks descendants of the root workitem
+    teamMembers: Optional[Dict[str,IdentityRef]] = Field(default_factory=list)#All team members of the project
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
     @classmethod
     def project_from_workitem(cls, json_data):
         fields = json_data.get("fields", {})
         return cls(
-            abbreviation=json_data.get("abbreviation"),
-            defaultTeamImageUrl=json_data.get("defaultTeamImageUrl"),
+            abbreviation=json_data.get("abbreviation",""),
+            defaultTeamImageUrl=json_data.get("defaultTeamImageUrl",""),
 
             id=str(json_data.get("id")) if json_data.get("id") else None,
             name=fields.get("System.Title"),
@@ -78,6 +88,9 @@ class Project(BaseModel):
 
             visibility=json_data.get("visibility"),
             web=json_data.get("web"),
+            childs=[],
+            root=None,
+            teamMembers={}
         )
     
     def getTasks(self, headers, azure_path="https://dev.azure.com/FSO-DnA-Devops", azure_project_id="e4005fd0-7b95-4391-8486-c4b21c935b2e"):
@@ -117,12 +130,11 @@ class Project(BaseModel):
         return List[self.teamMembers]
 
     def getRelationships(self, headers, azure_path="https://dev.azure.com/FSO-DnA-Devops", azure_project_id="e4005fd0-7b95-4391-8486-c4b21c935b2e"):
-        if not self.root:
+        if not self.root or not(self.root.childs):
             self.root = WorkItem()
             self.root.id = self.id
 
             #Obtiene sus hijos y sus descendientes
             #there are no more than 5 levels but just in case
             self.root.getInfo(10,headers=headers,azure_path=azure_path,azure_project_id=azure_project_id)
-
-    
+ 
