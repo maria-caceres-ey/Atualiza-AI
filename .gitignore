@@ -63,3 +63,6 @@ dmypy.json
 *.db
 *.sqlite3
 *.DS_Store
+
+# Ignore cached pycache files
+!__pycache__/
