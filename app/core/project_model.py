@@ -94,6 +94,7 @@ class EpicProject(Project):
         )
     
     def getTasks(self, headers, azure_path="https://dev.azure.com/FSO-DnA-Devops", azure_project_id="e4005fd0-7b95-4391-8486-c4b21c935b2e"):
+        print("Va a obtener las tareas")
         if len(self.tasks) > 0:#si ya se obtuvieron las tareas
             return self.tasks
         
@@ -108,6 +109,7 @@ class EpicProject(Project):
                     dfs(child)
             else:
                 self.tasks.append(node)#Don,t know if i´ll work
+        
         dfs(self.root)
         return self.tasks
     
@@ -130,11 +132,33 @@ class EpicProject(Project):
         return List[self.teamMembers]
 
     def getRelationships(self, headers, azure_path="https://dev.azure.com/FSO-DnA-Devops", azure_project_id="e4005fd0-7b95-4391-8486-c4b21c935b2e"):
-        if not self.root or not(self.root.childs):
-            self.root = WorkItem()
-            self.root.id = self.id
+        print("viendo relaciones")
+        if not self.root:
+            print("Esta creando el root")
+            url = f"{azure_path}/{azure_project_id}/_apis/wit/workitems/{self.id}"
+            response = requests.get(url, headers=headers)
+        
+            if response.status_code == 200:
+                self.root = WorkItem.from_json(response.json())
+                self.root.id = self.id
 
+        if not(self.root.childs):
             #Obtiene sus hijos y sus descendientes
             #there are no more than 5 levels but just in case
-            self.root.getInfo(10,headers=headers,azure_path=azure_path,azure_project_id=azure_project_id)
- 
+            print("empezo obteniendo info")
+            self.root.getInfo(5,headers=headers,azure_path=azure_path,azure_project_id=azure_project_id)
+
+    @classmethod
+    def get_from_request(cls, project_id: str, headers, azure_path="https://dev.azure.com/FSO-DnA-Devops", azure_project_id="e4005fd0-7b95-4391-8486-c4b21c935b2e"):
+        print("get from request")
+        url = f"{azure_path}/{azure_project_id}/_apis/wit/workitems/{project_id}"
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            json_data = response.json()
+            project = cls.project_from_workitem(json_data)
+            project.root = WorkItem.from_json(json_data)
+            print("Ya armo el root")
+            return project
+        else:
+            raise ValueError(f"Error fetching project data: {response.status_code} - {response.text}")

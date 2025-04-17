@@ -6,8 +6,10 @@ from typing import Dict, Any, List
 from app.core.devops_models import *
 from app.core.project_model import Project, EpicProject
 from app.core.devops_service import get_workitems_in_batches
+from app.core.customLRUCache import LRUCache
 
 router = APIRouter()
+cache = LRUCache(10)#Maximun of 10 projects in cache
 
 AZURE_DEVOPS_URL = os.getenv("AZURE_DEVOPS_URL")
 #AZURE_DEVOPS_TOKEN = os.getenv("AZURE_DEVOPS_TOKEN") #save it is insecure
@@ -46,14 +48,13 @@ async def list_projects():
     }
 
     try:
-        
         response = requests.post(url, headers=get_headers(), json=query)
         response.raise_for_status()  
         
         data = response.json()
 
         work_item_ids = [item["id"] for item in data.get("workItems", [])]
-        print(f"IDs dos Work Items: {work_item_ids}" if len(work_item_ids)<10 else f"IDs dos Work Items: {len(work_item_ids)} itens")#Tranquilo
+        #print(f"IDs dos Work Items: {work_item_ids}" if len(work_item_ids)<10 else f"IDs dos Work Items: {len(work_item_ids)} itens")#Tranquilo
         
         fields =  ["System.Title",
                 "System.Description",
@@ -63,7 +64,6 @@ async def list_projects():
         
         work_items_data = await get_workitems_in_batches(azure_project_id, work_item_ids, fields)
         
-
         projects = [
             EpicProject.project_from_workitem(p) for p in work_items_data
         ]
@@ -71,6 +71,21 @@ async def list_projects():
         return projects
 
     except requests.exceptions.RequestException as e:
-        print(f"Erro ao consultar a API: {e}")#Tranquilo
+        print(f"Erro ao consultar a API: ")#Tranquilo
 
     return projects
+
+@router.get("/project/{project_id}/tasks", response_model=List[WorkItem])
+async def project_tasks(project_id):
+    global azure_project_id
+
+    # Verifica se o projeto já está em cache
+    project = cache.get(project_id)
+    if project == -1:
+        project = EpicProject.get_from_request(project_id, headers=get_headers(), azure_path=AZURE_DEVOPS_URL, azure_project_id=azure_project_id)
+    
+    print("Va a invocar a obtener tareas")
+    tasks = project.getTasks(get_headers(), azure_project_id=azure_project_id)
+    cache.put(project_id, project)
+
+    return tasks

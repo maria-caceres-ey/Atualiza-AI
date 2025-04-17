@@ -147,7 +147,7 @@ async def get_workitems_in_batches(project_id: str, workitem_ids: List[int], fie
         batch_data = await get_workitems_batch(project_id, batch_ids, fields)
         
         if "error" in batch_data:
-            print(batch_data["error"])#Tranquilo
+            #print(batch_data["error"])#Tranquilo
             continue
         
         all_workitems.extend(batch_data.get("value", []))

@@ -1,7 +1,6 @@
 #devops_model
 #app/core/devops_models.py
 import requests
-import pprint
 import pandas as pd
 from pandas.api.types import (
     is_categorical_dtype,
@@ -104,6 +103,31 @@ class WorkItem(BaseModel):
     parentId: Optional[int] = None
 
     @classmethod
+    def create_with_defaults(cls, id: int, organization: Optional[str] = None, project: Optional[str] = None):
+        """
+        Create a WorkItem instance with default values for unspecified fields.
+        """
+        return cls(
+            id=id,
+            organization=organization,
+            project=project,
+            title=None,
+            state=None,
+            assignedTo=None,
+            target_date=None,
+            lastUpdateTime=None,
+            fields=None,
+            description=None,
+            commentVersionRef=None,
+            relations=None,
+            rev=None,
+            url=None,
+            completedHours=None,
+            childs=[],
+            parentId=None,
+        )
+
+    @classmethod
     def getFieldsForEpicProject(self):
         return ["System.Title",
                 "System.Description",
@@ -113,7 +137,8 @@ class WorkItem(BaseModel):
     
     def getInfo(self, levels:int, headers, azure_path="https://dev.azure.com/FSO-DnA-Devops", azure_project_id="e4005fd0-7b95-4391-8486-c4b21c935b2e"):
         #The only thing that needs is id to query all
-        base_url = f"{azure_path}/{azure_project_id}/_apis/wit/workItems/{self.id}?api-version=7.2-preview.1"
+        print(f"va a obtener info de {self.id}")
+        base_url = f"{azure_path}/{azure_project_id}/_apis/wit/workItems/{self.id}?api-version=7.0"
         if levels>0: base_url += f"&$expand=relations"
 
         response = requests.get(base_url, headers=headers)
@@ -121,13 +146,19 @@ class WorkItem(BaseModel):
 
         if response.status_code == 200:
             data = response.json()
+            '''
+            #lo haremos fuera
+            fields = data.get("fields", {})
+            print("los items que mandare para parsear",fields)
             if not self.title:
-                self.parseFields(data.get("fields", {}))
+                self.parseFields(fields)
+            '''
             if data.get("relations"):
+                print("va a ir por las relaciones")
                 for relation in data["relations"]:
                     if relation.get("rel") == "System.LinkTypes.Hierarchy-Forward":
                         child_id = relation["url"].split("/")[-1]
-                        child_work_item = WorkItem(id=child_id, organization=self.organization, project=self.project)
+                        child_work_item = WorkItem.create_with_defaults(child_id, self.organization, self.project)
                         child_work_item.getInfo(levels-1, headers, azure_path, azure_project_id)
                         self.childs.append(child_work_item)
 
@@ -138,10 +169,11 @@ class WorkItem(BaseModel):
     def __init__(self, **data):
         super().__init__(**data)
         fields = data.get("fields", {})
-        if fields != {}:
+        if fields!=None and fields != {}:
             self.parseFields(fields)
 
     def parseFields(self, fields):
+        print("Los fields que recibimos para parsear", fields)
         self.completedHours = fields.get("Microsoft.VSTS.Scheduling.CompletedWork", None)
         self.title = fields.get("System.Title", None)
         self.state = fields.get("System.State", None)
@@ -157,6 +189,7 @@ class WorkItem(BaseModel):
             self.target_date = None
 
     def getDetails(self, headers):
+        #Not using in this field
         response = requests.get(self.url, headers=headers)
         fields = response.json().get("fields")
         self.parseFields(fields)
